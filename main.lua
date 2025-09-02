@@ -210,3 +210,5 @@ players.PlayerAdded:connect(player_added);
 for _, v in next, players:GetPlayers() do
 	player_added(v);
 end
+
+print"loaded";
