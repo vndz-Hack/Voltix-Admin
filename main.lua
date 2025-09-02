@@ -24,7 +24,7 @@ if check_version ~= version then
 end
 ]]--
 
-if getgenv().loaded then
+if getgenv().loaded and getgenv().connections then
 	for _, v in next, getgenv().connections do
 		if typeof(v) == "thread" then
 			task.cancel(v);
