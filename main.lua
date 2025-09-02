@@ -18,6 +18,7 @@ if not game.Loaded then
 end
 
 -- checking version:
+--[[
 local version = "v1.0.1";
 local main_string = "https://raw.githubusercontent.com/vndz-Hack/Voltix-Admin/refs/heads/main/";
 local check_version = game:HttpGet(main_string.."version.txt");
@@ -25,6 +26,7 @@ local check_version = game:HttpGet(main_string.."version.txt");
 if check_version ~= version then
 	return loadstring(game:HttpGet(main_string.."main.lua"))();
 end
+]]--
 
 if getgenv().loaded then
 	for _, v in next, getgenv().connections do
