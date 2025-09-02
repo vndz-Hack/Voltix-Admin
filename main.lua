@@ -503,6 +503,7 @@ end)
 -- signals:
 insert(players.PlayerAdded:connect(player_added));
 insert(local_player.CharacterAdded:connect(character_added));
+insert(local_player.CharacterRemoving:connect(save_position))
 
 -- extras:
 
@@ -511,3 +512,4 @@ for _, v in next, players:GetPlayers() do
 end
 
 character_added(local_player.Character);
+save_position();
