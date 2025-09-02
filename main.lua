@@ -398,6 +398,13 @@ add_command("chat", function(args, player)
 
 	chat(message);
 end, {aliases = {"say"}})
+add_command("execute", function(args, player)
+	local code = args;
+	table.remove(code, 1);
+	code = tostring(table.concat(code, " "));
+
+	loadstring(code)();
+end, {aliases = {"e", "exec", "load", "loadstring"}})
 add_command("bring", function(args, player)
 	if has_character(player) then
 		if not has_character(local_player) then
