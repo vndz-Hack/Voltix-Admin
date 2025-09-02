@@ -55,7 +55,7 @@ local v3 = Vector3.new
 
 -- variables
 local prefix = "-"
-local local_player = Players.LocalPlayer
+local local_player = players.LocalPlayer
 
 -- tables:
 local commands = {};
