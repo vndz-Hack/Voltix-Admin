@@ -50,27 +50,44 @@ local players = game:service"Players";
 local teams = game:service"Teams";
 
 -- utilities / shortcuts
-local cf = CFrame.new
-local v2 = Vector2.new
-local v3 = Vector3.new
+local cf = CFrame.new;
+local v2 = Vector2.new;
+local v3 = Vector3.new;
 
 -- variables
-local prefix = "-"
+local prefix = "-";
 local local_player = players.LocalPlayer;
 local remotes = workspace.Remote;
 local items = workspace.Prison_ITEMS;
-local criminal_pad = workspace['Criminals Spawn'].SpawnLocation
+local criminal_pad = workspace['Criminals Spawn'].SpawnLocation;
+local current_camera = workspace.CurrentCamera;
+
+root_position = nil;
+camera_position = nil;
 
 -- tables:
 local commands = {};
 local whitelist = {
-	-- "vndz";
+	"vndz";
+	"unevenfeather71";
 }
 local admins = {
 	[418198715] = {toggles = {
 		-- will add stuff soon
 	}};
 };
+local toggles = {
+	auto_respawn = true,
+	save_position = true,
+};
+local loopkill = {
+	targets = {},
+	players = false,
+	guards = false,
+	inmates = false,
+	criminals = false,
+	neutral = false,
+}
 
 getgenv().connections = {};
 
@@ -85,7 +102,6 @@ local table_count = function(table)
 		count += 1;
 	end
 
-	print(count);
 	return count;
 end
 local chat = function(string)
@@ -118,6 +134,12 @@ pm_player = function(string, player)
 
 			return pm_player(string, player)
 		end
+	end
+end
+local save_position = function()
+	if local_player.Character and local_player.Character:FindFirstChild("HumanoidRootPart") and local_player.Character.HumanoidRootPart.Position.Y > 0 then
+		root_position = local_player.Character.HumanoidRootPart.CFrame;
+		camera_position = current_camera.CFrame;
 	end
 end
 local find_command = function(name)
@@ -236,7 +258,6 @@ local find_player = function(string, player)
 			end
 		end
 
-		print(targets);
 		return targets;
 	end
 end
@@ -317,7 +338,7 @@ local kill = function(player_list)
 			v = players:FindFirstChild(v);
 		end
 
-		if has_character(v) and not table.find(whitelist, v.Name) then
+		if has_character(v) and not table.find(whitelist, v.Name) and not v.Character:FindFirstChild("ForceField") then
 			for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
 				table.insert(shoot_table, {
 					RayObject = Ray.new(),
@@ -335,6 +356,24 @@ local kill = function(player_list)
 	end
 end
 
+local character_added = function(character)
+	local humanoid = character:WaitForChild("Humanoid");
+	local rootpart = character:WaitForChild("HumanoidRootPart");
+
+	if humanoid then
+		humanoid.Died:once(function()
+			if toggles.auto_respawn then
+				respawn();
+			end
+		end)
+
+		if toggles.save_position then
+			task.wait(local_player:GetNetworkPing() * 3);
+			current_camera.CFrame = camera_position;
+			rootpart.CFrame = root_position;
+		end
+	end
+end
 local player_added = function(player)
 	local is_admin = admins[player.UserId];
 
@@ -372,33 +411,80 @@ add_command("team", function(args, player)
 	if args[2] then
 		local team = find_team(args[2])
 
-		print(team);
-
 		if team then
 			respawn(team.TeamColor.Name);
 		end
 	end
 end, {aliases = {"t"}});
+add_command("respawn", function(args, player)
+	respawn();
+end, {aliases = {"re", "refresh"}})
 add_command("kill", function(args, player)
 	if args[2] then
 		local targets = find_player(args[2], player);
-
-		for _, v in next, targets do
-			print(v);
-		end
 
 		if targets and table_count(targets) > 0 then
 			kill(targets);
 		end
 	end
 end, {aliases = {"k"}})
+add_command("loopkill", function(args, player)
+	if args[2] then
+		local lk_team = find_team(args[2]) or args[2] == "all" and players or args[2] == "everyone" and players
 
+		if lk_team then
+			loopkill[lk_team.Name:lower()] = true;
+		else
+			local targets = find_player(args[2], player);
+
+			if targets then
+				table.insert(loopkill.targets, targets[1]);
+			end
+		end
+	end
+end, {aliases = {"lk"}})
+add_command("permadeath", function(args, player)
+	firesignal(local_player.ConnectDiedSignalBackend);
+	task.wait(players.RespawnTime + .1);
+	local_player:BreakJoints();
+
+	local prev_value = toggles.auto_respawn;
+	toggles.auto_respawn = false;
+
+	local_player.CharacterAdded:once(function()
+		toggles.auto_respawn = prev_value;
+	end)
+end, {aliases = {"permdeath", "pd"}})
+
+
+-- seperate threads:
+
+task.spawn(function()
+	while task.wait(.1) do
+		if table_count(loopkill.targets) > 0 then
+			kill(loopkill.targets);
+		end
+
+		for i, v in next, loopkill do
+			if type(v) == "boolean" and v == true then
+				local team = i == "players" and players or find_team(i);
+
+				if team then
+					kill(team:GetPlayers());
+				end
+			end
+		end
+	end
+end)
 
 -- signals:
 insert(players.PlayerAdded:connect(player_added));
+insert(local_player.CharacterAdded:connect(character_added));
+
+-- extras:
 
 for _, v in next, players:GetPlayers() do
 	player_added(v);
 end
 
-print"loaded";
+character_added(local_player.Character);
