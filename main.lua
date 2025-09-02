@@ -504,8 +504,10 @@ end, {aliases = {"unwl"}})
 add_command("prefix", function(args, player)
 	if args[2] then
 		prefix = args[2];
+
+		pm_player("prefix set to "..args[2], player);
 	end
-end)
+end, {aliases = {"pref"}})
 
 
 -- seperate threads:
