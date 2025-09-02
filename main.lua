@@ -307,26 +307,23 @@ respawn = function(color)
 		end
 	end
 end
-local kill = function(player_list, method)
+local kill = function(player_list)
 	local shoot_table = {};
-	local tool = nil;
+	local tool = get_item(nil, "Remington 870");
 
 	for _, v in next, player_list do
 		if type(v) == "string" then
+			print("string.. converting to a player");
 			v = players:FindFirstChild(v);
 		end
 
 		if has_character(v) and not table.find(whitelist, v.Name) then
-			tool = get_item(nil, "Remington 870");
-
-			print(math.ceil(v.Character.Humanoid.Health / 22.5));
-
 			for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
 				table.insert(shoot_table, {
 					RayObject = Ray.new(),
-					Cframe = cf(),
 					Distance = 0,
-					Hit = v.Head,
+					Cframe = cf(),
+					Hit = v.Character.Head,
 				})
 			end
 		end
