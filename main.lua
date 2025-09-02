@@ -13,10 +13,6 @@
                                                                                                                                                                              
 --]]
 
-if not game.Loaded then
-	game.Loaded:Wait();
-end
-
 -- checking version:
 --[[
 local version = "v1.0.1";
@@ -44,6 +40,8 @@ if getgenv().loaded then
 end
 
 getgenv().loaded = true;
+
+print"loading..";
 
 -- services:
 local replicated_storage = game:service"ReplicatedStorage";
@@ -96,6 +94,7 @@ pm_player = function(string, player)
 
 		if not whisper_channel then
 			chat("/w "..player.DisplayName);
+			task.wait(.1);
 
 			return pm_player(string, player)
 		end
@@ -186,7 +185,7 @@ end
 add_command("chat", function(args, player)
 	local message = args;
 	table.remove(message, 1);
-	message = tostring(table.concat(args, " "));
+	message = tostring(table.concat(message, " "));
 
 	chat(message);
 end, {aliases = {"say"}})
