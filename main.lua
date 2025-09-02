@@ -364,7 +364,7 @@ local character_added = function(character)
 	local rootpart = character:WaitForChild("HumanoidRootPart");
 
 	if humanoid then
-		humanoid.Died:once(function()
+		humanoid.Died:Once(function()
 			if toggles.auto_respawn then
 				respawn();
 			end
@@ -470,7 +470,7 @@ add_command("permadeath", function(args, player)
 	local prev_value = toggles.auto_respawn;
 	toggles.auto_respawn = false;
 
-	local_player.CharacterAdded:once(function()
+	local_player.CharacterAdded:Once(function()
 		toggles.auto_respawn = prev_value;
 	end)
 end, {aliases = {"permdeath", "pd"}})
