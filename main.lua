@@ -443,8 +443,8 @@ add_command("loopkill", function(args, player)
 		else
 			local targets = find_player(args[2], player);
 
-			if targets[1] then
-				table.insert(loopkill.targets, targets[1]);
+			if targets[1] and not table.find(loopkill.targets, targets[1].Name) then
+				table.insert(loopkill.targets, targets[1].Name);
 			end
 		end
 	end
@@ -458,9 +458,9 @@ add_command("unloopkill", function(args, player)
 		else
 			local targets = find_player(args[2], player);
 
-			if targets[1] then
-				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1]));
-				pm_player("unlking "..targets[1].Name, player);
+			if targets[1] and table.find(loopkill.targets, targets[1].Name) then
+				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1].Name));
+				pm_player("unlking "..targets[1].Name, targets[1].Name);
 			end
 		end
 	end
