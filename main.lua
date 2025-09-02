@@ -484,7 +484,7 @@ add_command("whitelist", function(args, player)
 
 		if player and not table.find(whitelist, player.Name) then
 			table.insert(whitelist, player.Name);
-			pm_player("whitelisted "..player.Name);
+			pm_player("whitelisted "..player.Name, player);
 		end
 	end
 end, {aliases = {"wl"}})
@@ -494,7 +494,7 @@ add_command("unwhitelist", function(args, player)
 
 		if player and table.find(whitelist, player.Name) then
 			table.remove(whitelist, table.find(whitelist, player.Name));
-			pm_player("unwhitelisted "..player.Name);
+			pm_player("unwhitelisted "..player.Name, player);
 		end
 	end
 end, {aliases = {"unwl"}})
