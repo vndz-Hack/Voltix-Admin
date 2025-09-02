@@ -131,7 +131,8 @@ pm_player = function(string, player)
 
 		if not whisper_channel then
 			chat("/w "..player.DisplayName);
-			task.wait(.1);
+			chat("/w "..player.Name);
+			task.wait(.3);
 
 			return pm_player(string, player);
 		end
