@@ -132,8 +132,10 @@ pm_player = function(string, player)
 			chat("/w "..player.DisplayName);
 			task.wait(.1);
 
-			return pm_player(string, player)
+			return pm_player(string, player);
 		end
+
+		whisper_channel:SendAsync(string);
 	end
 end
 local save_position = function()
@@ -453,7 +455,8 @@ add_command("unloopkill", function(args, player)
 			local targets = find_player(args[2], player);
 
 			if targets then
-				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1]));
+				loopkill.players[targets[1]] = nil;
+				pm_player("unlking "..targets[1].Name, player);
 			end
 		end
 	end
