@@ -351,6 +351,8 @@ local kill = function(player_list)
 					Hit = v.Character.Head,
 				})
 			end
+		else
+			print(v.Name)
 		end
 	end
 
