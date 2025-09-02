@@ -46,6 +46,7 @@ print"loading..";
 -- services:
 local replicated_storage = game:service"ReplicatedStorage";
 local text_chat_service = game:service"TextChatService";
+local teleport_service = game:service"TeleportService";
 local players = game:service"Players";
 local teams = game:service"Teams";
 
@@ -439,7 +440,7 @@ add_command("loopkill", function(args, player)
 		else
 			local targets = find_player(args[2], player);
 
-			if targets then
+			if targets[1] then
 				table.insert(loopkill.targets, targets[1]);
 			end
 		end
@@ -454,8 +455,8 @@ add_command("unloopkill", function(args, player)
 		else
 			local targets = find_player(args[2], player);
 
-			if targets then
-				loopkill.players[targets[1]] = nil;
+			if targets[1] then
+				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1]));
 				pm_player("unlking "..targets[1].Name, player);
 			end
 		end
@@ -473,6 +474,10 @@ add_command("permadeath", function(args, player)
 		toggles.auto_respawn = prev_value;
 	end)
 end, {aliases = {"permdeath", "pd"}})
+add_command("rejoin", function(args, player)
+	pm_player("rejoining..", player);
+	teleport_service:TeleportToPlaceInstance(game.PlaceId, game.JobId);
+end, {aliases = {"rj"}})
 
 
 -- seperate threads:
