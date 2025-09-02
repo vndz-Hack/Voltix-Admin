@@ -235,6 +235,7 @@ local find_player = function(string, player)
 			end
 		end
 
+		print(targets);
 		return targets;
 	end
 end
@@ -292,9 +293,9 @@ respawn = function(color)
 				if local_player.TeamColor.Name == color then
 					fire_team("Bright orange");
 				end
-
-				fire_team(color);
 			end
+
+			fire_team(color);
 		elseif color == "Really red" then
 			respawn("Bright blue");
 
@@ -310,7 +311,7 @@ local kill = function(player_list, method)
 	local tool = nil;
 
 	for _, v in next, player_list do
-		if typeof(v) == "string" then
+		if type(v) == "string" then
 			v = players:FindFirstChild(v);
 		end
 
@@ -323,7 +324,7 @@ local kill = function(player_list, method)
 				for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
 					shoot_table[#shoot_table + 1] = {
 						RayObject = Ray.new();
-						Distance = 69;
+						Distance = 0;
 						Cframe = cf();
 						Hit = v:FindFirstChild("Head");
 					};
@@ -374,7 +375,9 @@ end, {aliases = {"b"}});
 add_command("team", function(args, player)
 	if args[2] then
 		local team = find_team(args[2])
-		
+
+		print(team);
+
 		if team then
 			respawn(team.TeamColor.Name);
 		end
@@ -383,6 +386,8 @@ end, {aliases = {"t"}});
 add_command("kill", function(args, player)
 	if args[2] then
 		local targets = find_player(args[2], player);
+
+		print(targets);
 
 		if targets and table_count(targets) > 0 then
 			kill(targets);
