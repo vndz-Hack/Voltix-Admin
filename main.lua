@@ -256,7 +256,7 @@ local fire_team = function(color)
 	remotes.TeamEvent:FireServer(color);
 end
 local get_item = function(list, return_item)
-	if table_count(list) > 0 then
+	if list and table_count(list) > 0 then
 		for _, v in next, list do
 			if items:FindFirstChild(v, true) then
 				invoke_item(v);
@@ -316,24 +316,20 @@ local kill = function(player_list, method)
 		end
 
 		if has_character(v) and not table.find(whitelist, v.Name) then
-			if method == "melee" then
+			tool = get_item(nil, "Remington 870");
 
-			else
-				tool = get_item({}, "Remington 870");
-
-				for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
-					shoot_table[#shoot_table + 1] = {
-						RayObject = Ray.new();
-						Distance = 0;
-						Cframe = cf();
-						Hit = v:FindFirstChild("Head");
-					};
-				end
+			for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
+				shoot_table[#shoot_table + 1] = {
+					RayObject = Ray.new(),
+					Cframe = cf(),
+					Distance = 0,
+					Hit = v.Head,
+				}
 			end
 		end
 	end
 
-	if not method and tool and table_count(shoot_table) > 0 then
+	if tool and table_count(shoot_table) > 0 then
 		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
 		replicated_storage.ReloadEvent:FireServer(tool);
 	end
