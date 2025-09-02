@@ -480,21 +480,21 @@ add_command("rejoin", function(args, player)
 end, {aliases = {"rj"}})
 add_command("whitelist", function(args, player)
 	if args[2] then
-		local player = find_player(args[2], player)[1];
+		local target = find_player(args[2], player)[1];
 
-		if player and not table.find(whitelist, player.Name) then
-			table.insert(whitelist, player.Name);
-			pm_player("whitelisted "..player.Name, player);
+		if target and not table.find(whitelist, target.Name) then
+			table.insert(whitelist, target.Name);
+			pm_player("whitelisted "..target.Name, player);
 		end
 	end
 end, {aliases = {"wl"}})
 add_command("unwhitelist", function(args, player)
 	if args[2] then
-		local player = find_player(args[2], player)[1];
+		local target = find_player(args[2], player)[1];
 
-		if player and table.find(whitelist, player.Name) then
-			table.remove(whitelist, table.find(whitelist, player.Name));
-			pm_player("unwhitelisted "..player.Name, player);
+		if target and table.find(whitelist, target.Name) then
+			table.remove(whitelist, table.find(whitelist, target.Name));
+			pm_player("unwhitelisted "..target.Name, player);
 		end
 	end
 end, {aliases = {"unwl"}})
