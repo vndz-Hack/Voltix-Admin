@@ -370,7 +370,7 @@ local character_added = function(character)
 			end
 		end)
 
-		if toggles.save_position then
+		if toggles.save_position and camera_position and root_position then
 			task.wait(local_player:GetNetworkPing() * 3);
 			current_camera.CFrame = camera_position;
 			rootpart.CFrame = root_position;
@@ -532,4 +532,3 @@ for _, v in next, players:GetPlayers() do
 end
 
 character_added(local_player.Character);
-save_position();
