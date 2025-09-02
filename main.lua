@@ -47,6 +47,7 @@ print"loading..";
 local replicated_storage = game:service"ReplicatedStorage";
 local text_chat_service = game:service"TextChatService";
 local players = game:service"Players";
+local teams = game:service"Teams";
 
 -- utilities / shortcuts
 local cf = CFrame.new
@@ -55,10 +56,16 @@ local v3 = Vector3.new
 
 -- variables
 local prefix = "-"
-local local_player = players.LocalPlayer
+local local_player = players.LocalPlayer;
+local remotes = workspace.Remote;
+local items = workspace.Prison_ITEMS;
+local criminal_pad = workspace['Criminals Spawn'].SpawnLocation
 
 -- tables:
 local commands = {};
+local whitelist = {
+	"vndz";
+}
 local admins = {
 	[418198715] = {toggles = {
 		-- will add stuff soon
@@ -68,6 +75,18 @@ local admins = {
 getgenv().connections = {};
 
 -- functions:
+local insert = function(connection)
+	connections[#connections + 1] = connection;
+end
+local table_count = function(table)
+	local count = 0;
+
+	for _, _ in next, table do
+		count += 1;
+	end
+
+	return count;
+end
 local chat = function(string)
 	local text_channels = text_chat_service:WaitForChild("TextChannels");
 
@@ -170,14 +189,162 @@ end
 local has_character = function(player)
 	return player and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild("HumanoidRootPart");
 end
+local fti = function(part, part2)
+	if part and part2 then
+		local old_cc = part.CanCollide;
+		local old_t = part.Transparency;
+		local old_cf = part.CFrame;
+
+		part.CanCollide = false;
+		part.Transparency = 1;
+
+		for _ = 1, 3 do
+			part.CFrame = part2.CFrame;
+			task.wait();
+		end
+
+		part.CFrame = old_cf;
+		part.CanCollide = old_cc;
+		part.Transparency = old_t;
+	end
+end
+local find_team = function(string)
+	for _, v in next, teams:GetChildren() do
+		if v.Name:lower():find(string:lower()) then
+			return v;
+		end
+	end
+end
+local find_player = function(string, player)
+	if string and string ~= "" then
+		local targets = {};
+
+		string = string:lower();
+
+		if string == "me" then
+			targets = {player};
+		elseif string == "all" or string == "everyone" then
+			targets = players:GetPlayers();
+		elseif find_team(string) then
+			targets = find_team(string):GetPlayers();
+		else
+			for _, v in next, players:GetPlayers() do
+				if v.Name:lower():find(string) or v.DisplayName:lower():find(string) then
+					table.insert(targets, v);
+				end
+			end
+		end
+
+		return targets;
+	end
+end
+local invoke_item = function(name)
+	task.spawn(function()
+		remotes.ItemHandler:InvokeServer({
+			Position = local_player.Character:FindFirstChild("HumanoidRootPart").CFrame;
+			Parent = items:FindFirstChild(name, true);
+		});
+	end)
+end
+local fire_melee = function(player, amount)
+	for _ = 1, amount or 1 do
+		replicated_storage.meleeEvent:FireServer(player, {Name = "Crude Knife"});
+	end
+end
+local fire_team = function(color)
+	remotes.TeamEvent:FireServer(color);
+end
+local get_item = function(list, return_item)
+	if table_count(list) > 0 then
+		for _, v in next, list do
+			if items:FindFirstChild(v, true) then
+				invoke_item(v);
+			end
+		end
+	end
+
+	if return_item then
+		local tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
+
+		if not tool then
+			repeat
+				invoke_item(return_item);
+				tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
+				task.wait(.1);
+			until tool;
+		end
+
+		return tool;
+	end
+end
+respawn = function(color)
+	if not color then
+		color = local_player.TeamColor.Name;
+	end
+
+	if color then
+		if color == "Bright orange" or color == "Medium stone grey" then
+			fire_team(color);
+		elseif color == "Bright blue" then
+			if #teams.Guards:GetPlayers() == 8 then
+				fire_team("Bright orange");
+
+				if local_player.TeamColor.Name == color then
+					fire_team("Bright orange");
+				end
+
+				fire_team(color);
+			end
+		elseif color == "Really red" then
+			respawn("Bright blue");
+
+			repeat
+				fti(criminal_pad, local_player.Character:FindFirstChild("HumanoidRootPart"));
+				task.wait(.1)
+			until local_player.TeamColor.Name == color
+		end
+	end
+end
+local kill = function(player_list, method)
+	local shoot_table = {};
+	local tool = nil;
+
+	for _, v in next, player_list do
+		if typeof(v) == "string" then
+			v = players:FindFirstChild(v);
+		end
+
+		if has_character(v) and not table.find(whitelist, v.Name) then
+			if method == "melee" then
+
+			else
+				tool = get_item({}, "Remington 870");
+
+				for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
+					shoot_table[#shoot_table + 1] = {
+						RayObject = Ray.new();
+						Distance = 69;
+						Cframe = cf();
+						Hit = v:FindFirstChild("Head");
+					};
+				end
+			end
+		end
+	end
+
+	if not method and tool and table_count(shoot_table) > 0 then
+		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
+		replicated_storage.ReloadEvent:FireServer(tool);
+	end
+end
 
 local player_added = function(player)
 	local is_admin = admins[player.UserId];
 
 	if is_admin then
-		player.Chatted:connect(function(message)
+		insert(player.Chatted:connect(function(message)
 			on_chatted(message, player);
-		end)
+		end))
 	end
 end
 
@@ -204,9 +371,28 @@ add_command("bring", function(args, player)
 		end
 	end
 end, {aliases = {"b"}});
+add_command("team", function(args, player)
+	if args[2] then
+		local team = find_team(args[2])
+
+		if team then
+			respawn(team.Name);
+		end
+	end
+end, {aliases = {"t"}});
+add_command("kill", function(args, player)
+	if args[2] then
+		local targets = find_player(args[2], player);
+
+		if targets and table_count(targets) > 0 then
+			kill(targets);
+		end
+	end
+end, {aliases = {"k"}})
+
 
 -- signals:
-players.PlayerAdded:connect(player_added);
+insert(players.PlayerAdded:connect(player_added));
 
 for _, v in next, players:GetPlayers() do
 	player_added(v);
