@@ -85,6 +85,7 @@ local table_count = function(table)
 		count += 1;
 	end
 
+	print(count);
 	return count;
 end
 local chat = function(string)
@@ -383,7 +384,9 @@ add_command("kill", function(args, player)
 	if args[2] then
 		local targets = find_player(args[2], player);
 
-		print(targets);
+		for _, v in next, targets do
+			print(v);
+		end
 
 		if targets and table_count(targets) > 0 then
 			kill(targets);
