@@ -241,7 +241,7 @@ end
 local invoke_item = function(name)
 	task.spawn(function()
 		remotes.ItemHandler:InvokeServer({
-			Position = local_player.Character:FindFirstChild("HumanoidRootPart").CFrame;
+			Position = local_player.Character:FindFirstChild("HumanoidRootPart").Position;
 			Parent = items:FindFirstChild(name, true);
 		});
 	end)
@@ -374,9 +374,9 @@ end, {aliases = {"b"}});
 add_command("team", function(args, player)
 	if args[2] then
 		local team = find_team(args[2])
-
+		
 		if team then
-			respawn(team.Name);
+			respawn(team.TeamColor.Name);
 		end
 	end
 end, {aliases = {"t"}});
