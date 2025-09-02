@@ -501,6 +501,11 @@ add_command("unwhitelist", function(args, player)
 		end
 	end
 end, {aliases = {"unwl"}})
+add_command("prefix", function(args, player)
+	if args[2] then
+		prefix = args[2];
+	end
+end)
 
 
 -- seperate threads:
