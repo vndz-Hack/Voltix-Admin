@@ -48,10 +48,14 @@ local replicated_storage = game:service"ReplicatedStorage";
 local text_chat_service = game:service"TextChatService";
 local players = game:service"Players";
 
--- varables:
-local local_player = players.LocalPlayer;
+-- utilities / shortcuts
+local cf = CFrame.new
+local v2 = Vector2.new
+local v3 = Vector3.new
 
-local prefix = "-";
+-- variables
+local prefix = "-"
+local local_player = Players.LocalPlayer
 
 -- tables:
 local commands = {};
@@ -62,10 +66,6 @@ local admins = {
 };
 
 getgenv().connections = {};
-
-local cf = CFrame.new;
-local v2 = Vector2.new;
-local v3 = Vector3.new;
 
 -- functions:
 local chat = function(string)
