@@ -75,7 +75,7 @@ local whitelist = {
 }
 local admins = {
 	[418198715] = {toggles = {
-		-- will add stuff soon
+		antitouch = false,
 	}};
 };
 local toggles = {
@@ -166,10 +166,8 @@ local add_command = function(name, func, info)
 end
 local add_toggle = function(name, func, info)
 	add_command(name, function(args, player)
-		local admin_toggles = admins[player.UserId].toggles;
-
-		if admin_toggles[name] ~= nil then
-			local prev_value = admin_toggles[name];
+		if admins[player.UserId].toggles[name] ~= nil then
+			local prev_value = admins[player.UserId].toggles[name];
 
 			if args[2] then
 				if not (args[2] == "on" or args[2] == "off") then
@@ -179,15 +177,15 @@ local add_toggle = function(name, func, info)
 					return;
 				end
 
-				admin_toggles[name] = args[2] == "on" and true or args[2] == "off" and false or prev_value
+				admins[player.UserId].toggles[name] = args[2] == "on" and true or args[2] == "off" and false or prev_value
 			else
-				admin_toggles[name] = not admin_toggles[name];
+				admins[player.UserId].toggles[name] = not admins[player.UserId].toggles[name];
 			end
 
-			pm_player(("%s is now %s"):format(name, admin_toggles[name] and "on" or "off"), player)
+			pm_player(("%s is now %s"):format(name, admins[player.UserId].toggles[name] and "on" or "off"), player)
 
 		end
-	end, info or {})
+	end, info)
 end
 local on_chatted = function(string, player)
 	if string == "" then
