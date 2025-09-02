@@ -62,6 +62,7 @@ local remotes = workspace.Remote;
 local items = workspace.Prison_ITEMS;
 local criminal_pad = workspace['Criminals Spawn'].SpawnLocation;
 local current_camera = workspace.CurrentCamera;
+local car_container = workspace.CarContainer;
 
 root_position = nil;
 camera_position = nil;
@@ -182,6 +183,8 @@ local add_toggle = function(name, func, info)
 			else
 				admin_toggles[name] = not admin_toggles[name];
 			end
+
+			pm_player(("%s is now %s"):format(name, admin_toggles[name] and "on" or "off"), player)
 
 		end
 	end, info or {})
@@ -304,6 +307,13 @@ local get_item = function(list, return_item)
 		return tool;
 	end
 end
+local void_car = function()
+	for _, v in next, car_container:GetChildren() do
+		if v and v:FindFirstChild("Body") then
+
+		end
+	end
+end
 respawn = function(color)
 	if not color then
 		color = local_player.TeamColor.Name;
@@ -386,6 +396,23 @@ local player_added = function(player)
 	if is_admin then
 		insert(player.Chatted:connect(function(message)
 			on_chatted(message, player);
+		end))
+		insert(player.CharacterAdded:connect(function(character)
+			local humanoid = character:WaitForChild("Humanoid");
+
+			humanoid.Touched:connect(function(hit)
+				if hit and admins[player.UserId].toggles.antitouch then
+					local model = hit:FindFirstAncestorOfClass("Model");
+
+					if model and model:FindFirstChild("Humanoid") then
+						local target = players:GetCharacterFromCharacter(model);
+
+						if target then
+							kill({target});
+						end
+					end
+				end
+			end)
 		end))
 	end
 end
@@ -515,6 +542,9 @@ add_command("prefix", function(args, player)
 		pm_player("prefix set to "..args[2], player);
 	end
 end, {aliases = {"pref"}})
+
+-- toggles:
+add_toggle("antitouch", nil, {aliases = {"at"}})
 
 
 -- seperate threads:
