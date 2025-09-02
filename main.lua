@@ -272,7 +272,7 @@ local get_item = function(list, return_item)
 			repeat
 				invoke_item(return_item);
 				tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
-				task.wait(.1);
+				task.wait();
 			until tool;
 		end
 
@@ -303,7 +303,7 @@ respawn = function(color)
 			repeat
 				fti(criminal_pad, local_player.Character:FindFirstChild("HumanoidRootPart"));
 				task.wait(.1)
-			until local_player.TeamColor.Name == color
+			until local_player.TeamColor.Name == color;
 		end
 	end
 end
@@ -319,13 +319,15 @@ local kill = function(player_list, method)
 		if has_character(v) and not table.find(whitelist, v.Name) then
 			tool = get_item(nil, "Remington 870");
 
+			print(math.ceil(v.Character.Humanoid.Health / 22.5));
+
 			for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
-				shoot_table[#shoot_table + 1] = {
+				table.insert(shoot_table, {
 					RayObject = Ray.new(),
 					Cframe = cf(),
 					Distance = 0,
 					Hit = v.Head,
-				}
+				})
 			end
 		end
 	end
