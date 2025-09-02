@@ -64,7 +64,7 @@ local criminal_pad = workspace['Criminals Spawn'].SpawnLocation
 -- tables:
 local commands = {};
 local whitelist = {
-	"vndz";
+	-- "vndz";
 }
 local admins = {
 	[418198715] = {toggles = {
