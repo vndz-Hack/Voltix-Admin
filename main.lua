@@ -443,6 +443,21 @@ add_command("loopkill", function(args, player)
 		end
 	end
 end, {aliases = {"lk"}})
+add_command("unloopkill", function(args, player)
+	if args[2] then
+		local lk_team = find_team(args[2]) or args[2] == "all" and players or args[2] == "everyone" and players
+
+		if lk_team then
+			loopkill[lk_team.Name:lower()] = false;
+		else
+			local targets = find_player(args[2], player);
+
+			if targets then
+				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1]));
+			end
+		end
+	end
+end, {aliases = {"unlk"}})
 add_command("permadeath", function(args, player)
 	firesignal(local_player.ConnectDiedSignalBackend);
 	task.wait(players.RespawnTime + .1);
