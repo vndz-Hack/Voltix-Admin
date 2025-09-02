@@ -465,7 +465,7 @@ end, {aliases = {"unlk"}})
 add_command("permadeath", function(args, player)
 	firesignal(local_player.ConnectDiedSignalBackend);
 	task.wait(players.RespawnTime + .1);
-	local_player:BreakJoints();
+	local_player.Character:BreakJoints();
 
 	local prev_value = toggles.auto_respawn;
 	toggles.auto_respawn = false;
@@ -478,6 +478,26 @@ add_command("rejoin", function(args, player)
 	pm_player("rejoining..", player);
 	teleport_service:TeleportToPlaceInstance(game.PlaceId, game.JobId);
 end, {aliases = {"rj"}})
+add_command("whitelist", function(args, player)
+	if args[2] then
+		local player = find_player(args[2], player)[1];
+
+		if player and not table.find(whitelist, player.Name) then
+			table.insert(whitelist, player.Name);
+			pm_player("whitelisted "..player.Name);
+		end
+	end
+end, {aliases = {"wl"}})
+add_command("unwhitelist", function(args, player)
+	if args[2] then
+		local player = find_player(args[2], player)[1];
+
+		if player and table.find(whitelist, player.Name) then
+			table.remove(whitelist, table.find(whitelist, player.Name));
+			pm_player("unwhitelisted "..player.Name);
+		end
+	end
+end, {aliases = {"unwl"}})
 
 
 -- seperate threads:
