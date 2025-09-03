@@ -477,8 +477,11 @@ bring_player = function(target, player, cframe)
 					until target.Character.Humanoid.Sit == false or not car;
 
 					task.wait(.2)
-					car:BreakJoints();
-					task.wait(.2)
+					for i = 1, 5 do
+						car:BreakJoints();
+						task.wait();
+					end
+					task.wait(.4);
 					respawn(prev_team); -- if not neutral will respawn in the last position lol
 					car:Destroy();
 				end
@@ -699,6 +702,7 @@ for i, v in next, teleports do
 		end
 
 		if target then
+			print(target.Name)
 			bring_player(target, player, v.cframe);
 		end
 	end, v.aliases and {aliases = v.aliases} or nil)
