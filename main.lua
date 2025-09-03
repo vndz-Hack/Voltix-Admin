@@ -498,6 +498,10 @@ end
 local player_added = function(player)
 	local is_admin = admins[player.UserId];
 
+	-- easier on my pm_player function to handle private message.. hate textchatservice
+	chat("/w "..player.DisplayName);
+	chat("/w "..player.Name);
+
 	if is_admin then
 		insert(player.Chatted:connect(function(message)
 			on_chatted(message, player);
