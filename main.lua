@@ -63,6 +63,7 @@ local items = workspace.Prison_ITEMS;
 local criminal_pad = workspace['Criminals Spawn'].SpawnLocation;
 local current_camera = workspace.CurrentCamera;
 local car_container = workspace.CarContainer;
+local player_gui = local_player:WaitForChild("PlayerGui");
 
 local is_busy = false;
 
@@ -437,7 +438,7 @@ bring_player = function(target, player, cframe)
 		local prev_team = local_player.TeamColor.Name;
 		if prev_team == "Medium stone grey" then
 			respawn("Bright orange");
-			task.wait(local_player:GetNetworkPing() * 3.5);
+			task.wait(local_player:GetNetworkPing() * 5);
 		end
 
 		local car = find_car(player);
@@ -499,11 +500,16 @@ local character_added = function(character)
 			end
 		end)
 
+		task.wait(local_player:GetNetworkPing() * 2.5);
+
 		if toggles.save_position and camera_position and root_position then
-			task.wait(local_player:GetNetworkPing() * 2.5);
 			current_camera.CFrame = camera_position;
 			rootpart.CFrame = root_position;
 		end
+
+		current_camera.CameraType = Enum.CameraType.Custom;
+		current_camera.CameraSubject = Humanoid;
+		current_camera.FieldOfView = 70;
 	end
 end
 local player_added = function(player)
@@ -530,6 +536,7 @@ local player_added = function(player)
 						local target = players:GetPlayerFromCharacter(model);
 
 						if target then
+							print(target);
 							kill({target});
 						end
 					end
