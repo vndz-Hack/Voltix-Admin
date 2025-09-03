@@ -223,6 +223,9 @@ local on_chatted = function(string, player)
 	end)
 
 	if not success and result then
+		if is_busy then
+			is_busy = false;
+		end
 		return pm_player(result, player);
 	end
 end
