@@ -150,20 +150,6 @@ local save_position = function()
 		camera_position = current_camera.CFrame;
 	end
 end
-local find_command = function(name)
-	local found_command = commands[name];
-
-	if not found_command then
-		for _, v in next, commands do
-			if table.find(v.info.aliases or {}, name) then
-				found_command = v;
-				break;
-			end
-		end
-	end
-
-	return found_command;
-end
 local add_command = function(name, func, info)
 	commands[name] = {func = func, info = info or {}};
 end
@@ -189,6 +175,20 @@ local add_toggle = function(name, func, info)
 
 		end
 	end, info)
+end
+local find_command = function(name)
+	local found_command = commands[name];
+
+	if not found_command then
+		for _, v in next, commands do
+			if table.find(v.info.aliases or {}, name) then
+				found_command = v;
+				break;
+			end
+		end
+	end
+
+	return found_command;
 end
 local on_chatted = function(string, player)
 	if string == "" then
@@ -697,3 +697,5 @@ for _, v in next, players:GetPlayers() do
 end
 
 character_added(local_player.Character);
+
+print"loaded";
