@@ -482,13 +482,14 @@ bring_player = function(target, player, cframe)
 
 					task.wait(.2);
 					car:PivotTo(cf(0, -500, 0));
-
-					respawn(prev_team);
 				end
 			end
 		else
 			pm_player("could not get car", player);
 		end
+
+		task.wait(.5);
+		respawn(prev_team);
 
 		is_busy = false;
 	else
