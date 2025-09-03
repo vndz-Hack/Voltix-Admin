@@ -346,7 +346,6 @@ local kill = function(player_list)
 
 	for _, v in next, player_list do
 		if type(v) == "string" then
-			print("string.. converting to a player");
 			v = players:FindFirstChild(v);
 		end
 
@@ -531,8 +530,6 @@ local player_added = function(player)
 		end))
 	end
 end
-
-print"start of commands";
 
 -- commands:
 add_command("chat", function(args, player)
