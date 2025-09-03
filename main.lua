@@ -434,7 +434,7 @@ bring_player = function(target, player, cframe)
 		local prev_team = local_player.TeamColor.Name;
 		if prev_team == "Medium stone grey" then
 			respawn("Bright orange");
-			task.wait(local_player:GetNetworkPing() * 2.5);
+			task.wait(local_player:GetNetworkPing() * 3.5);
 		end
 
 		local car = find_car(player);
