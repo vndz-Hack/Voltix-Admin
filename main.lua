@@ -510,7 +510,7 @@ local player_added = function(player)
 		end)
 
 		insert(player.Chatted:connect(function(message)
-			print(message);
+			on_chatted(message, player);
 		end))
 		insert(player.CharacterAdded:connect(function(character)
 			local humanoid = character:WaitForChild("Humanoid");
