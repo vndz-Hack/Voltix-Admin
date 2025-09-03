@@ -93,6 +93,16 @@ local loopkill = {
 	criminals = false,
 	neutral = false,
 };
+local teleports = {
+	nexus = {cframe = cf(916, 99, 2379), aliases = {"nex"}},
+	cafeteria = {cframe = cf(941, 99, 2288), aliases = {"cafe"}},
+	armory = {cframe = cf(836, 99, 2266), aliases = {"arm"}},
+	backnexus = {cframe = cf(982, 99, 2331), aliases = {"back", "bn"}},
+	roof = {cframe = cf(823, 119, 2325)},
+	crimbase = {cframe = cf(903, 94, 2068), aliases = {"base", "cb"}},
+	gatetower = {cframe = cf(504, 125, 2318), aliases = {"gate", "gt"}},
+	tower = {cframe = cf(791, 125, 2587)}
+};
 
 getgenv().connections = {};
 
@@ -659,10 +669,25 @@ add_command("carbring", function(args, player)
 		local target = find_player(args[2], player)[1]
 
 		if target then
-			bring_player(target, player, player.Character.HumanoidRootPart.CFrame * cf(0, 0, 5));
+			bring_player(target, player, player.Character.HumanoidRootPart.CFrame * cf(0, 0, -10));
 		end
 	end
 end, {aliases = {"bring", "cb"}})
+add_command("goto", function(args, player)
+	if args[2] then
+		local target = find_player(args[2], player)[1]
+
+		if target then
+			bring(player, player, target.Character.HumanoidRootPart.CFrame * cf(0, 0, -10))
+		end
+	end
+end, {aliases = {"teleportto", "to"}})
+
+for i, v in next, teleports do
+	add_command(i, function(args, player)
+		bring(player, player, v.cframe)
+	end, {aliases = v.aliases})
+end
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
