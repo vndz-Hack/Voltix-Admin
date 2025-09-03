@@ -100,10 +100,10 @@ getgenv().connections = {};
 local insert = function(connection)
 	connections[#connections + 1] = connection;
 end
-local table_count = function(table)
+local table_count = function(tbl)
 	local count = 0;
 
-	for _, _ in next, table do
+	for _, _ in next, tbl do
 		count += 1;
 	end
 
@@ -428,7 +428,7 @@ bring_player = function(target, player, cframe)
 			task.wait(local_player:GetNetworkPing() * 2.5);
 		end
 
-		local car = find_car();
+		local car = find_car(player);
 
 		save_position();
 
@@ -505,27 +505,30 @@ local player_added = function(player)
 		end)
 
 		insert(player.Chatted:connect(function(message)
+			print(message);
 			on_chatted(message, player);
 		end))
 		insert(player.CharacterAdded:connect(function(character)
 			local humanoid = character:WaitForChild("Humanoid");
 
-			humanoid.Touched:connect(function(hit)
+			insert(humanoid.Touched:connect(function(hit)
 				if hit and admins[player.UserId].toggles.antitouch then
 					local model = hit:FindFirstAncestorOfClass("Model");
 
 					if model and model:FindFirstChild("Humanoid") then
-						local target = players:GetCharacterFromCharacter(model);
+						local target = players:GetPlayerFromCharacter(model);
 
 						if target then
 							kill({target});
 						end
 					end
 				end
-			end)
+			end))
 		end))
 	end
 end
+
+print"start of commands";
 
 -- commands:
 add_command("chat", function(args, player)
@@ -542,7 +545,7 @@ add_command("execute", function(args, player)
 
 	loadstring(code)();
 end, {aliases = {"e", "exec", "load", "loadstring"}})
-add_command("bring", function(args, player)
+add_command("bringalt", function(args, player)
 	if has_character(player) then
 		if not has_character(local_player) then
 			return pm_player("local player is dead", player);
@@ -556,7 +559,7 @@ add_command("bring", function(args, player)
 			local_root.CFrame = cf(new_cf.Position, new_cf.Position + player_root.CFrame.LookVector);
 		end
 	end
-end, {aliases = {"b"}});
+end, {aliases = {"ba", "b"}});
 add_command("team", function(args, player)
 	if args[2] then
 		local team = find_team(args[2])
@@ -589,6 +592,7 @@ add_command("loopkill", function(args, player)
 
 			if targets[1] and not table.find(loopkill.targets, targets[1].Name) then
 				table.insert(loopkill.targets, targets[1].Name);
+				pm_player("lking "..targets[1].Name, player);
 			end
 		end
 	end
@@ -604,7 +608,7 @@ add_command("unloopkill", function(args, player)
 
 			if targets[1] and table.find(loopkill.targets, targets[1].Name) then
 				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1].Name));
-				pm_player("unlking "..targets[1].Name, targets[1].Name);
+				pm_player("unlking "..targets[1].Name, player);
 			end
 		end
 	end
@@ -652,7 +656,7 @@ add_command("prefix", function(args, player)
 		pm_player("prefix set to "..args[2], player);
 	end
 end, {aliases = {"pref"}})
-add_command("bring", function(args, player)
+add_command("carbring", function(args, player)
 	if args[2] then
 		local target = find_player(args[2], player)[1]
 
@@ -660,7 +664,7 @@ add_command("bring", function(args, player)
 			bring_player(target, player, player.Character.HumanoidRootPart.CFrame * cf(0, 0, 5));
 		end
 	end
-end, {aliases = {"br"}})
+end, {aliases = {"bring", "cb"}})
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
