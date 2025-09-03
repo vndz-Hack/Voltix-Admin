@@ -13,6 +13,8 @@
                                                                                                                                                                              
 --]]
 
+local start = tick();
+
 -- checking version:
 --[[
 local version = "v1.0.1";
@@ -66,6 +68,7 @@ local criminal_pad = workspace['Criminals Spawn'].SpawnLocation;
 local current_camera = workspace.CurrentCamera;
 local car_container = workspace.CarContainer;
 local player_gui = local_player:WaitForChild("PlayerGui");
+local doors = workspace.Doors;
 
 local is_busy = false;
 
@@ -80,9 +83,12 @@ local whitelist = {
 	"vertigoawai";
 }
 local admins = {
-	[418198715] = {toggles = {
-		antitouch = false,
-	}};
+	[418198715] = {
+		toggles = {
+			antitouch = false,
+		};
+		threads = {};
+	};
 };
 local toggles = {
 	auto_respawn = true,
@@ -178,14 +184,38 @@ local add_toggle = function(name, func, info)
 					return;
 				end
 
-				admins[player.UserId].toggles[name] = args[2] == "on" and true or args[2] == "off" and false or prev_value
+				admins[player.UserId].toggles[name] = args[2] == "on" and true or args[2] == "off" and false or prev_value;
 			else
 				admins[player.UserId].toggles[name] = not admins[player.UserId].toggles[name];
 			end
 
-			pm_player(("%s is now %s"):format(name, admins[player.UserId].toggles[name] and "on" or "off"), player)
+			pm_player(("%s is now %s"):format(name, admins[player.UserId].toggles[name] and "on" or "off"), player);
 
 		end
+	end, info)
+end
+local add_thread_command = function(name, func, info)
+	add_command(name, function(args, player)
+		local admin_threads = admins[player.UserId].threads;
+		local existing_thread = admin_threads[name];
+
+		if existing_thread and coroutine.status(existing_thread) ~= "dead" then
+			task.cancel(existing_thread);
+			admin_threads[name] = nil;
+			pm_player(("%s thread stopped"):format(name), player);
+
+			return;
+		end
+
+		local new_coroutine = coroutine.create(function()
+			func(args, player);
+		end)
+
+		admin_threads[name] = new_coroutine;
+		insert(new_coroutine);
+		task.spawn(new_coroutine);
+
+		pm_player(("%s thread started"):format(name), player);
 	end, info)
 end
 local find_command = function(name)
@@ -284,9 +314,9 @@ local find_player = function(string, player)
 		return targets;
 	end
 end
-local invoke_item = function(name)
+local invoke_item = function(name, data)
 	task.spawn(function()
-		remotes.ItemHandler:InvokeServer({
+		remotes.ItemHandler:InvokeServer(data or {
 			Position = local_player.Character:FindFirstChild("HumanoidRootPart").Position;
 			Parent = items:FindFirstChild(name, true);
 		});
@@ -299,6 +329,15 @@ local fire_melee = function(player, amount)
 end
 local fire_team = function(color)
 	remotes.TeamEvent:FireServer(color);
+end
+local toggle_value = function(value)
+	if value and value.Value == false then
+		invoke_item({
+			Position = local_player.Character:FindFirstChild("HumanoidRootPart").Position;
+			Parent = items.buttons['Prison Gate'];
+			isActive = value;
+		});
+	end
 end
 local get_item = function(list, return_item)
 	if list and table_count(list) > 0 then
@@ -419,6 +458,7 @@ local find_car = function(player)
 
 			repeat
 				local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
+				invoke_item(nil, button);
 				remotes.ItemHandler:InvokeServer(button);
 				task.wait();
 			until car;
@@ -481,7 +521,10 @@ bring_player = function(target, player, cframe)
 					until target.Character.Humanoid.Sit == false or not car;
 
 					task.wait(.2);
-					car:PivotTo(cf(0, -500, 0));
+					for i = 1, 10 do
+						car:PivotTo(cf(0, -500, 0));
+						task.wait(.05);
+					end
 				end
 			end
 		else
@@ -494,6 +537,27 @@ bring_player = function(target, player, cframe)
 		is_busy = false;
 	else
 		pm_player("player has no character", player);
+	end
+end
+local open_door = function(door, player)
+	if door then
+		local prev_team = local_player.TeamColor.Name;
+
+		respawn("Bright blue");
+		task.wait(local_player:GetNetworkPing() * 5);
+
+		if local_player.TeamColor.Name ~= "Bright blue" then
+			pm_player("guards team full", player);
+			return;
+		end
+		if not hit_box then
+			pm_player("door is already opened", player);
+			return;
+		end
+
+		fti(hit_box, local_player.Character:FindFirstChild("HumanoidRootPart"));
+		task.wait(.5);
+		respawn(prev_team);
 	end
 end
 
@@ -719,6 +783,26 @@ for i, v in next, teleports do
 		end
 	end, v.aliases and {aliases = v.aliases} or nil)
 end
+add_command("door", function(args, player)
+	local closest_door = nil;
+	local closest_distance = math.huge;
+
+	for _, v in next, doors:GetChildren() do
+		local distance = (v:FindFirstChild("hitbox", true).Position - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude;
+
+		if distance <= closest_distance then
+			closest_door = v;
+			closest_distance = distance;
+		end
+	end
+
+	open_door(closest_door)
+end)
+add_thread_command("test", function(args, player)
+	while task.wait(1) do
+		chat("test")
+	end
+end)
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
