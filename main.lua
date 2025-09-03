@@ -696,9 +696,9 @@ for i, v in next, teleports do
 		end
 
 		if target then
-			bring(target, player, v.cframe);
+			bring_player(target, player, v.cframe);
 		end
-	end, {aliases = v.aliases})
+	end, v.aliases and {aliases = v.aliases} or nil)
 end
 
 -- toggles:
