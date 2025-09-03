@@ -476,12 +476,10 @@ bring_player = function(target, player, cframe)
 						task.wait();
 					until target.Character.Humanoid.Sit == false or not car;
 
-					task.wait(.2)
-					for i = 1, 5 do
-						car:BreakJoints();
-						task.wait();
-					end
-					task.wait(.4);
+					task.wait(.5)
+					car:PivotTo(cf(0, -50, 0));
+					car:BreakJoints();
+					task.wait(.5);
 					respawn(prev_team); -- if not neutral will respawn in the last position lol
 					car:Destroy();
 				end
