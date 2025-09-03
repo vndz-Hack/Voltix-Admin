@@ -673,19 +673,31 @@ add_command("carbring", function(args, player)
 		end
 	end
 end, {aliases = {"bring", "cb"}})
-add_command("goto", function(args, player)
+add_command("teleportto", function(args, player)
 	if args[2] then
-		local target = find_player(args[2], player)[1]
+		local target = find_player(args[2], player)[1];
 
 		if target then
-			bring(player, player, target.Character.HumanoidRootPart.CFrame * cf(0, 0, -10))
+			bring_player(player, player, target.Character.HumanoidRootPart.CFrame * cf(0, 0, -10));
+			pm_player("teleporting to "..target.Name, player);
 		end
 	end
-end, {aliases = {"teleportto", "to"}})
+end, {aliases = {"goto", "to"}})
 
 for i, v in next, teleports do
-	add_command(i, function(args, player)
-		bring(player, player, v.cframe)
+	print(i, v, v.aliases, v.cframe);
+	add_command(tostring(i), function(args, player)
+		local target = nil;
+
+		if args[2] then
+			target = find_player(args[2], player)[1];
+		else
+			target = player;
+		end
+
+		if target then
+			bring(target, player, v.cframe);
+		end
 	end, {aliases = v.aliases})
 end
 
