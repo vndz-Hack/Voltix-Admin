@@ -47,6 +47,7 @@ print"loading";
 local replicated_storage = game:service"ReplicatedStorage";
 local text_chat_service = game:service"TextChatService";
 local teleport_service = game:service"TeleportService";
+local starter_gui = game:service"StarterGui";
 local core_gui = game:service"CoreGui";
 local players = game:service"Players";
 local teams = game:service"Teams";
@@ -513,7 +514,7 @@ local character_added = function(character)
 		current_camera.FieldOfView = 70;
 
 		player_gui:WaitForChild("Home"):WaitForChild("intro").Visible = false;
-		core_gui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true);
+		starter_gui:SetCoreGuiEnabled("All", true);
 	end
 end
 local player_added = function(player)
