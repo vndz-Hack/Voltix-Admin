@@ -464,7 +464,12 @@ bring_player = function(target, player, cframe)
 						task.wait();
 					until not seat.Occupant or not has_character(target);
 
-					car:PivotTo(cf(0, -500, 0));
+					task.wait(.2)
+
+					for i = 1, 10 do
+						car:PivotTo(cf(0, -500, 0));
+						task.wait()
+					end
 					respawn(prev_team); -- if not neutral will respawn in the last position lol
 				end
 			end
@@ -506,7 +511,6 @@ local player_added = function(player)
 
 		insert(player.Chatted:connect(function(message)
 			print(message);
-			on_chatted(message, player);
 		end))
 		insert(player.CharacterAdded:connect(function(character)
 			local humanoid = character:WaitForChild("Humanoid");
@@ -699,7 +703,6 @@ insert(local_player.CharacterRemoving:connect(save_position))
 
 for _, v in next, players:GetPlayers() do
 	player_added(v);
-	print(v.Name);
 end
 
 character_added(local_player.Character);
