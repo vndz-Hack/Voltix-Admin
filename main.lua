@@ -64,6 +64,8 @@ local criminal_pad = workspace['Criminals Spawn'].SpawnLocation;
 local current_camera = workspace.CurrentCamera;
 local car_container = workspace.CarContainer;
 
+local is_busy = false;
+
 root_position = nil;
 camera_position = nil;
 
@@ -89,7 +91,7 @@ local loopkill = {
 	inmates = false,
 	criminals = false,
 	neutral = false,
-}
+};
 
 getgenv().connections = {};
 
@@ -152,7 +154,7 @@ local find_command = function(name)
 
 	if not found_command then
 		for _, v in next, commands do
-			if v.info and table.find(v.info.aliases, name) then
+			if table.find(v.info.aliases or {}, name) then
 				found_command = v;
 				break;
 			end
@@ -305,13 +307,6 @@ local get_item = function(list, return_item)
 		return tool;
 	end
 end
-local void_car = function()
-	for _, v in next, car_container:GetChildren() do
-		if v and v:FindFirstChild("Body") then
-
-		end
-	end
-end
 respawn = function(color)
 	if not color then
 		color = local_player.TeamColor.Name;
@@ -341,6 +336,11 @@ respawn = function(color)
 	end
 end
 local kill = function(player_list)
+	if local_player.TeamColor.Name ~= "Medium stone grey" then
+		respawn("Medium stone grey");
+		task.wait(local_player:GetNetworkPing() * 3);
+	end
+
 	local shoot_table = {};
 	local tool = get_item(nil, "Remington 870");
 
@@ -359,14 +359,120 @@ local kill = function(player_list)
 					Hit = v.Character.Head,
 				})
 			end
-		else
-			print(v.Name)
 		end
 	end
 
 	if tool and table_count(shoot_table) > 0 then
 		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
 		replicated_storage.ReloadEvent:FireServer(tool);
+	end
+end
+local find_button = function()
+	local button = nil;
+
+	for _, v in next, items.buttons:GetChildren() do
+		if v.Name == "Car Spawner" then
+			if not v['Car Spawner'].deb then
+				button = v['Car Spawner'];
+				break;
+			end
+		end
+	end
+
+	return button;
+end
+local find_car = function(player)
+	local car = nil;
+
+	for _, v in next, car_container:GetChildren() do
+		if v and v:FindFirstChild("Body") and v.Body:FindFirstChild("VehicleSeat") and not v.Body.VehicleSeat.Occupant then
+			car = v;
+			break;
+		end
+	end
+
+	if not car then
+		local button = find_button();
+
+		if button then
+			local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
+			task.wait(local_player:GetNetworkPing() * 2);
+
+			task.spawn(function()
+				car = car_container.ChildAdded:Wait();
+			end)
+
+			repeat
+				remotes.ItemHandler:InvokeServer(button);
+				task.wait();
+			until car;
+		else
+			pm_player("try again.. could not find button or car.", player)
+		end
+	end
+
+	return car;
+end
+bring_player = function(target, player, cframe)
+	if has_character(target) and target.Character.Humanoid.Sit == false then
+		if is_busy then
+			repeat
+				task.wait();
+			until is_busy == false;
+		end
+
+		is_busy = true;
+		local prev_team = local_player.TeamColor.Name;
+		if prev_team == "Medium stone grey" then
+			respawn("Bright orange");
+			task.wait(local_player:GetNetworkPing() * 2.5);
+		end
+
+		local car = find_car();
+
+		save_position();
+
+		if car then
+			local seat = car.Body.VehicleSeat;
+			local attempts = 0;
+
+			repeat
+				replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
+				attempts += 1;
+				task.wait();
+			until (has_character(local_player) and local_player.Character.Humanoid.Sit) or not car or attempts >= 500;
+			
+			if car and local_player.Character.Humanoid.Sit then
+				local target_seat = car.Body.Seat;
+				local attempts = 0;
+
+				car.PrimaryPart = target_seat;
+
+				repeat
+					car:PivotTo(target.Character:GetPivot());
+					task.wait();
+					attempts += 1;
+				until not has_character(target) or (has_character(target) and target.Character.Humanoid.Sit) or not car or attempts >= 500;
+				
+				if car and target.Character.Humanoid.Sit then
+					for i = 1, 10 do
+						Car:PivotTo(cframe);
+						task.wait();
+					end
+
+					repeat
+						task.wait();
+					until not seat.Occupant or not has_character(target);
+
+					car:PivotTo(cf(0, -500, 0));
+					respawn(prev_team); -- if not neutral will respawn in the last position lol
+				end
+			end
+		end
+
+		is_busy = false;
+	else
+		pm_player("player has no character", player);
 	end
 end
 
@@ -382,7 +488,7 @@ local character_added = function(character)
 		end)
 
 		if toggles.save_position and camera_position and root_position then
-			task.wait(local_player:GetNetworkPing() * 3);
+			task.wait(local_player:GetNetworkPing() * 2.5);
 			current_camera.CFrame = camera_position;
 			rootpart.CFrame = root_position;
 		end
@@ -540,6 +646,15 @@ add_command("prefix", function(args, player)
 		pm_player("prefix set to "..args[2], player);
 	end
 end, {aliases = {"pref"}})
+add_command("bring", function(args, player)
+	if args[2] then
+		local target = find_player(args[2], player)[1]
+
+		if target then
+			bring_player(target, player, player.Character.HumanoidRootPart.CFrame * cf(0, 0, 5));
+		end
+	end
+end)
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
@@ -547,7 +662,7 @@ add_toggle("antitouch", nil, {aliases = {"at"}})
 
 -- seperate threads:
 
-task.spawn(function()
+insert(task.spawn(function()
 	while task.wait(.1) do
 		if table_count(loopkill.targets) > 0 then
 			kill(loopkill.targets);
@@ -563,7 +678,7 @@ task.spawn(function()
 			end
 		end
 	end
-end)
+end))
 
 -- signals:
 insert(players.PlayerAdded:connect(player_added));
