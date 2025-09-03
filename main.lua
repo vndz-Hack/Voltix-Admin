@@ -461,7 +461,7 @@ bring_player = function(target, player, cframe)
 
 					repeat
 						task.wait();
-					until not seat.Occupant or not has_character(target);
+					until not target_seat.Occupant or not has_character(target);
 
 					task.wait(.2)
 
