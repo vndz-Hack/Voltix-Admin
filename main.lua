@@ -74,6 +74,7 @@ local commands = {};
 local whitelist = {
 	"vndz";
 	"unevenfeather71";
+	"vertigoawai";
 }
 local admins = {
 	[418198715] = {toggles = {
