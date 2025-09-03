@@ -477,6 +477,7 @@ bring_player = function(target, player, cframe)
 					car:BreakJoints();
 					task.wait(.2)
 					respawn(prev_team); -- if not neutral will respawn in the last position lol
+					car:Destroy();
 				end
 			end
 		end
@@ -695,9 +696,6 @@ for i, v in next, teleports do
 		end
 
 		if target then
-			print(target);
-			print(player);
-			print(v.cframe);
 			bring_player(target, player, v.cframe);
 		end
 	end, v.aliases and {aliases = v.aliases} or nil)
