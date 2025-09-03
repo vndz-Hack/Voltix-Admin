@@ -41,7 +41,7 @@ end
 
 getgenv().loaded = true;
 
-print"loading..";
+print"loading";
 
 -- services:
 local replicated_storage = game:service"ReplicatedStorage";
@@ -135,7 +135,6 @@ pm_player = function(string, player)
 
 		if not whisper_channel then
 			chat("/w "..player.DisplayName);
-			chat("/w "..player.Name);
 			task.wait(.3);
 
 			return pm_player(string, player);
@@ -501,8 +500,9 @@ local player_added = function(player)
 	if is_admin then
 		-- easier on my pm_player function to handle private message.. hate textchatservice
 
-		chat("/w "..player.DisplayName);
-		chat("/w "..player.Name);
+		task.spawn(function()
+			chat("/w "..player.DisplayName);
+		end)
 
 		insert(player.Chatted:connect(function(message)
 			on_chatted(message, player);
@@ -695,6 +695,7 @@ insert(local_player.CharacterRemoving:connect(save_position))
 
 for _, v in next, players:GetPlayers() do
 	player_added(v);
+	print(v.Name);
 end
 
 character_added(local_player.Character);
