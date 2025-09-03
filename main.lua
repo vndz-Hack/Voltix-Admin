@@ -373,7 +373,7 @@ local find_button = function()
 
 	for _, v in next, items.buttons:GetChildren() do
 		if v.Name == "Car Spawner" then
-			if not v['Car Spawner'].deb then
+			if not v['Car Spawner'].deb.Value then
 				button = v['Car Spawner'];
 				break;
 			end
@@ -421,8 +421,8 @@ bring_player = function(target, player, cframe)
 				task.wait();
 			until is_busy == false;
 		end
-
 		is_busy = true;
+
 		local prev_team = local_player.TeamColor.Name;
 		if prev_team == "Medium stone grey" then
 			respawn("Bright orange");
@@ -442,7 +442,7 @@ bring_player = function(target, player, cframe)
 				attempts += 1;
 				task.wait();
 			until (has_character(local_player) and local_player.Character.Humanoid.Sit) or not car or attempts >= 500;
-			
+
 			if car and local_player.Character.Humanoid.Sit then
 				local target_seat = car.Body.Seat;
 				local attempts = 0;
@@ -454,10 +454,10 @@ bring_player = function(target, player, cframe)
 					task.wait();
 					attempts += 1;
 				until not has_character(target) or (has_character(target) and target.Character.Humanoid.Sit) or not car or attempts >= 500;
-				
+
 				if car and target.Character.Humanoid.Sit then
 					for i = 1, 10 do
-						Car:PivotTo(cframe);
+						car:PivotTo(cframe);
 						task.wait();
 					end
 
@@ -500,7 +500,7 @@ local player_added = function(player)
 
 	if is_admin then
 		-- easier on my pm_player function to handle private message.. hate textchatservice
-		
+
 		chat("/w "..player.DisplayName);
 		chat("/w "..player.Name);
 
@@ -660,7 +660,7 @@ add_command("bring", function(args, player)
 			bring_player(target, player, player.Character.HumanoidRootPart.CFrame * cf(0, 0, 5));
 		end
 	end
-end)
+end, {aliases = {"br"}})
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
