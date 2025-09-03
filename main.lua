@@ -480,8 +480,10 @@ bring_player = function(target, player, cframe)
 						task.wait();
 					until target.Character.Humanoid.Sit == false or not car;
 
-					task.wait(.5);
-					car:PivotTo(cf(0, -600, 0));
+					task.wait(.2);
+					car:PivotTo(cf(0, -500, 0));
+
+					respawn(prev_team);
 				end
 			end
 		else
