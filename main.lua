@@ -418,6 +418,7 @@ local find_car = function(player)
 			end)
 
 			repeat
+				local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
 				remotes.ItemHandler:InvokeServer(button);
 				task.wait();
 			until car;
@@ -483,6 +484,8 @@ bring_player = function(target, player, cframe)
 					car:PivotTo(cf(0, -500, 0));
 				end
 			end
+		else
+			pm_player("could not get car", player);
 		end
 
 		is_busy = false;
