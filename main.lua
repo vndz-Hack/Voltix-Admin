@@ -685,7 +685,6 @@ add_command("teleportto", function(args, player)
 end, {aliases = {"goto", "to"}})
 
 for i, v in next, teleports do
-	print(i, v, v.aliases, v.cframe);
 	add_command(tostring(i), function(args, player)
 		local target = nil;
 
@@ -696,6 +695,9 @@ for i, v in next, teleports do
 		end
 
 		if target then
+			print(target);
+			print(player);
+			print(v.cframe);
 			bring_player(target, player, v.cframe);
 		end
 	end, v.aliases and {aliases = v.aliases} or nil)
