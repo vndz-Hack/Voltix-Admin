@@ -481,7 +481,7 @@ bring_player = function(target, player, cframe)
 					until target.Character.Humanoid.Sit == false or not car;
 
 					task.wait(.5);
-					car:PivotTo(cf(0, -500, 0));
+					car:PivotTo(cf(0, -600, 0));
 				end
 			end
 		else
@@ -752,6 +752,6 @@ for _, v in next, players:GetPlayers() do
 	player_added(v);
 end
 
-character_added(local_player.Character);
+respawn();
 
 print"loaded";
