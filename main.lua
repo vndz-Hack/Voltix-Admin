@@ -84,8 +84,9 @@ local whitelist = {
 }
 local admins = {
 	[418198715] = {
+		kill_aura_distance = 15;
 		toggles = {
-			antitouch = false,
+			antitouch = false;
 		};
 		threads = {};
 	};
@@ -798,18 +799,36 @@ add_command("door", function(args, player)
 
 	open_door(closest_door)
 end)
-add_thread_command("test", function(args, player)
-	while task.wait(1) do
-		chat("test")
+add_command("killauraamount", function(args, player)
+	if args[2] and tonumber(args[2]) then
+		admins[player.UserId].kill_aura_distance = tonumber(args[2]);
 	end
-end)
+end, {aliases = {"kaa"}})
+add_thread_command("killaura", function(args, player)
+	while task.wait(.05) do
+		if has_character(player) then
+			local kill_table = {};
+
+			for _, v in next, players:GetPlayers() do
+				if has_character(v) and not v:FindFirstChild("ForceField") then
+					local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p)
+					
+					if distance <= admins[player.UserId].kill_aura_distance then
+						table.insert(kill_table, v.Name);
+					end
+				end
+			end
+
+			kill(kill_table);
+		end
+	end
+end, {aliases = {"ka"}})
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
 
 
 -- seperate threads:
-
 insert(task.spawn(function()
 	while task.wait(.1) do
 		if table_count(loopkill.targets) > 0 then
