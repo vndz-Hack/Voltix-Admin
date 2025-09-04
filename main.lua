@@ -820,7 +820,7 @@ add_thread_command("killaura", function(args, player)
 
 			for _, v in next, players:GetPlayers() do
 				if has_character(v) and not v:FindFirstChild("ForceField") then
-					local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p)
+					local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p).Magnitude
 					
 					if distance <= admins[player.UserId].kill_aura_distance then
 						table.insert(kill_table, v.Name);
