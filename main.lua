@@ -804,6 +804,15 @@ add_command("killauraamount", function(args, player)
 		admins[player.UserId].kill_aura_distance = tonumber(args[2]);
 	end
 end, {aliases = {"kaa"}})
+add_command("test", function(args, player)
+	for _, v in next, car_container:GetDescendats() do
+		if v and v:IsA("Seat") and not v:FindFirstChild("SeatWeld") then
+			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
+			respawn("Bright orange");
+			task.wait(.35);
+		end
+	end
+end)
 add_thread_command("killaura", function(args, player)
 	while task.wait(.05) do
 		if has_character(player) then
