@@ -4,8 +4,14 @@ local players = game:service"Players";
 local local_player = players.LocalPlayer;
 local hit = replicate_storage.hit;
 
-hit:FireServer(players.vndz.Character.Head);
+local tool = local_player:FindFirstChild("Stakeout", true);
 
-task.wait(4)
+if tool then
+	print"got tool";
 
-hit:FireServer(players.vndz.Character.Head, local_player.Character.Stakeout);
+	for i = 1, 15 do
+		hit:FireServer(players.vndz.Character.Head, tool);
+	end
+
+	print"dead";
+end
