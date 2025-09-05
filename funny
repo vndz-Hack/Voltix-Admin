@@ -11,6 +11,7 @@ if tool then
 
 	for i = 1, 15 do
 		hit:FireServer(players.vndz.Character.Head, tool);
+		task.wait(.05);
 	end
 
 	print"dead";
