@@ -2,6 +2,10 @@ local replicate_storage = game:service"ReplicatedStorage";
 local players = game:service"Players";
 
 local local_player = players.LocalPlayer;
-local events = replicate_storage.Events;
+local hit = replicate_storage.hit;
 
-events.LoadCharacter(3);
+hit:FireServer(players.vndz.Character.Head);
+
+task.wait(4)
+
+hit:FireServer(players.vndz.Character.Head, local_player.Character.Stakeout);
