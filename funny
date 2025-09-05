@@ -1,1 +1,7 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/main.lua"))()
+local replicate_storage = game:service"ReplicatedStorage";
+local players = game:service"Players";
+
+local local_player = players.LocalPlayer;
+local events = replicate_storage.Events;
+
+events.LoadCharacter(3);
