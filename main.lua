@@ -50,6 +50,7 @@ local replicated_storage = game:service"ReplicatedStorage";
 local text_chat_service = game:service"TextChatService";
 local teleport_service = game:service"TeleportService";
 local starter_gui = game:service"StarterGui";
+local run_service = game:service"RunService";
 local core_gui = game:service"CoreGui";
 local players = game:service"Players";
 local teams = game:service"Teams";
@@ -69,8 +70,6 @@ local current_camera = workspace.CurrentCamera;
 local car_container = workspace.CarContainer;
 local player_gui = local_player:WaitForChild("PlayerGui");
 local doors = workspace.Doors;
-
-local is_busy = false;
 
 root_position = nil;
 camera_position = nil;
@@ -94,6 +93,7 @@ local admins = {
 local toggles = {
 	auto_respawn = true,
 	save_position = true,
+	anti_sit = true;
 };
 local loopkill = {
 	targets = {},
@@ -203,20 +203,22 @@ local add_thread_command = function(name, func, info)
 		if existing_thread and coroutine.status(existing_thread) ~= "dead" then
 			task.cancel(existing_thread);
 			admin_threads[name] = nil;
+
 			pm_player(("%s thread stopped"):format(name), player);
 
 			return;
 		end
 
-		local new_coroutine = coroutine.create(function()
+		local new_coroutine;
+
+		new_coroutine = coroutine.create(function()
+			pm_player(("%s thread started"):format(name), player);
 			func(args, player);
+			pm_player(("%s thread stopped"):format(name), player);
 		end)
 
 		admin_threads[name] = new_coroutine;
-		insert(new_coroutine);
 		task.spawn(new_coroutine);
-
-		pm_player(("%s thread started"):format(name), player);
 	end, info)
 end
 local find_command = function(name)
@@ -257,9 +259,6 @@ local on_chatted = function(string, player)
 	end)
 
 	if not success and result then
-		if is_busy then
-			is_busy = false;
-		end
 		return pm_player(result, player);
 	end
 end
@@ -472,13 +471,6 @@ local find_car = function(player)
 end
 bring_player = function(target, player, cframe)
 	if has_character(target) and target.Character.Humanoid.Sit == false then
-		if is_busy then
-			repeat
-				task.wait();
-			until is_busy == false;
-		end
-		is_busy = true;
-
 		local prev_team = local_player.TeamColor.Name;
 		if prev_team == "Medium stone grey" then
 			respawn("Bright orange");
@@ -535,8 +527,6 @@ bring_player = function(target, player, cframe)
 
 		task.wait(.5);
 		respawn(prev_team);
-
-		is_busy = false;
 	else
 		pm_player("player has no character", player);
 	end
@@ -588,6 +578,10 @@ local character_added = function(character)
 
 		player_gui:WaitForChild("Home"):WaitForChild("intro").Visible = false;
 		starter_gui:SetCoreGuiEnabled("All", true);
+
+		humanoid:SetStateEnabled("FallingDown", false);
+		humanoid:SetStateEnabled("Ragdoll", false);
+		humanoid:SetStateEnabled("Seated", not toggles.anti_sit);
 	end
 end
 local player_added = function(player)
@@ -799,7 +793,11 @@ add_command("door", function(args, player)
 		end
 	end
 
-	open_door(closest_door, player)
+	if closest_door then
+		open_door(closest_door, player);
+	else
+		pm_player("too far from a door", player);
+	end
 end)
 add_command("killauraamount", function(args, player)
 	if args[2] and tonumber(args[2]) then
@@ -824,7 +822,6 @@ add_thread_command("spamcars", function(args, player)
 		local seat = car:FindFirstChild("Body") and car.Body.VehicleSeat;
 
 		if car then
-
 			local attempts = 0;
 
 			repeat
@@ -841,10 +838,40 @@ add_thread_command("spamcars", function(args, player)
 			replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
 			respawn();
 			task.wait(.3);
-			is_busy = false;
 		end
 	end
 end, {aliases = {"ka"}})
+
+add_command("circle", function(args, player)
+	local tool = get_item(nil, "Remington 870");
+
+	if tool then
+		local shoot_table = {};
+
+		for i = 0, 9 do
+			local angle = (i / 9) * math.pi * 2;
+
+			local x = math.cos(angle) * 10;
+			local z = math.sin(angle) * 10;
+
+			local origin = has_character(player) and player.Character:FindFirstChild("Head").CFrame
+			local point = orign.Position + v3(x, 0, z);
+
+			local dir = (point - orign.Position).Unit;
+			local look_cf = cf(orign.Position, orign.Position + dir);
+
+			table.insert(shoot_table, {
+				["RayObject"] = Ray.new();
+				["Cframe"] = look_cf;
+				["Distance"] = 10;
+				["Hit"] = nil;
+			})
+		end
+
+		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
+		replicatesignal.ReloadEvent:FireServer(tool);
+	end
+end)
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
@@ -874,6 +901,21 @@ insert(players.PlayerAdded:connect(player_added));
 insert(local_player.CharacterAdded:connect(character_added));
 insert(local_player.CharacterRemoving:connect(save_position))
 
+insert(run_service.RenderStepped:connect(function()
+	for _, v in next, players:GetPlayers() do
+		if v and v ~= local_player and v.Character then
+			for _, name in next, {"Head", "Torso", "HumanoidRootPart"} do
+				local part = v.Character:FindFirstChild(name);
+
+				if part and part.CanCollide then
+					part.AssemblyLinearVelocity = v3();
+					part.AssemblyAngularVelocity = v3();
+				end
+			end
+		end
+	end
+end))
+
 -- extras:
 
 for _, v in next, players:GetPlayers() do
@@ -883,3 +925,4 @@ end
 respawn();
 
 print"loaded";
+print(tick() - start);
