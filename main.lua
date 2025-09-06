@@ -82,13 +82,7 @@ local whitelist = {
 	"vertigoawai";
 }
 local admins = {
-	[418198715] = {
-		kill_aura_distance = 15;
-		toggles = {
-			antitouch = false;
-		};
-		threads = {};
-	};
+	418198715;
 };
 local toggles = {
 	auto_respawn = true,
@@ -312,6 +306,15 @@ local find_player = function(string, player)
 		end
 
 		return targets;
+	end
+end
+local find_user_id = function(user_id)
+	if tonumber(user_id) then
+		for _, v in next, players:GetPlayers() do
+			if v.UserId == user_id then
+				return v;
+			end
+		end
 	end
 end
 local invoke_item = function(name, data)
@@ -553,6 +556,44 @@ local open_door = function(door, player)
 		respawn(prev_team);
 	end
 end
+local create_circle = function(player)
+	local tool = get_item(nil, "Remington 870");
+
+	if tool and has_character(player) then
+		local shoot_table = {};
+		local segments = admins[player.UserId].segments;
+		local radius = admins[player.UserId].radius;
+
+		local origin = player.Character:FindFirstChild("Head").CFrame;
+
+		local points = {};
+
+		for i = 0, segments - 1 do
+			local angle = (i / segments) * math.pi * 2;
+			local x = math.cos(angle) * radius;
+			local z = math.sin(angle) * radius;
+			table.insert(points, origin.Position + Vector3.new(x, 0, z));
+		end
+
+		for i = 1, #points do
+			local a = points[i];
+			local b = points[(i % #points) + 1];
+			local dir = (b - a);
+			local dist = dir.Magnitude;
+			local look_cf = cf(a, b);
+
+			table.insert(shoot_table, {
+				RayObject = Ray.new();
+				Cframe = look_cf;
+				Distance = dist;
+				Hit = nil;
+			});
+		end
+
+		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
+		replicated_storage.ReloadEvent:FireServer(tool);
+	end
+end
 
 local character_added = function(character)
 	local humanoid = character:WaitForChild("Humanoid");
@@ -590,6 +631,18 @@ local player_added = function(player)
 	if is_admin then
 		-- easier on my pm_player function to handle private message.. hate textchatservice
 
+		if not is_admin.toggles then
+			admins[player.UserId] = {
+				kill_aura_distance = 15;
+				toggles = {
+					anti_touch = false;
+					circle = false;
+				};
+				threads = {};
+				segments = 25;
+				radius = 25;
+			};
+		end
 		task.spawn(function()
 			chat("/w "..player.DisplayName);
 		end)
@@ -851,45 +904,19 @@ add_thread_command("spamcars", function(args, player)
 	end
 end, {aliases = {"ka"}})
 
-add_command("circle", function(args, player)
-	local tool = get_item(nil, "Remington 870");
+for i, v in next, {"radius", "segments"} do
+	add_command(v, function(args, player)
+		local change_value = admins[player.UserId][v];
 
-	if tool then
-		local shoot_table = {};
-		local segments = 20;
-		local radius = 10;
+		if change_value ~= nil and args[2] and tonumber(args[2])then
+			admins[player.UserId][v] = tonumber(args[2])
 
-		local origin = has_character(player) and player.Character:FindFirstChild("Head").CFrame;
-
-		local points = {};
-
-		for i = 0, segments - 1 do
-			local angle = (i / segments) * math.pi * 2;
-			local x = math.cos(angle) * radius;
-			local z = math.sin(angle) * radius;
-			table.insert(points, origin.Position + Vector3.new(x, 0, z));
+			pm_player(("set %s to %s"):format(name, args[2]), player);
 		end
+	end)
+end
 
-		for i = 1, #points do
-			local a = points[i];
-			local b = points[(i % #points) + 1];
-			local dir = (b - a);
-			local dist = dir.Magnitude;
-			local look_cf = cf(a, b);
-
-			table.insert(shoot_table, {
-				RayObject = Ray.new();
-				Cframe = look_cf;
-				Distance = dist;
-				Hit = nil;
-			});
-		end
-
-		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
-		replicated_storage.ReloadEvent:FireServer(tool);
-	end
-end)
-
+add_toggle("circle");
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
@@ -897,7 +924,8 @@ add_toggle("antitouch", nil, {aliases = {"at"}})
 
 -- seperate threads:
 insert(task.spawn(function()
-	while task.wait(.1) do
+	while true do
+		task.wait(.1);
 		if table_count(loopkill.targets) > 0 then
 			kill(loopkill.targets);
 		end
@@ -908,6 +936,15 @@ insert(task.spawn(function()
 
 				if team then
 					kill(team:GetPlayers());
+				end
+			end
+		end
+		for i, v in next, admins do
+			if v.toggles.circle then
+				local admin = find_user_id(i);
+
+				if admin then
+					create_circle(admin);
 				end
 			end
 		end
