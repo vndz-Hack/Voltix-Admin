@@ -911,7 +911,7 @@ for i, v in next, {"radius", "segments"} do
 		if change_value ~= nil and args[2] and tonumber(args[2])then
 			admins[player.UserId][v] = tonumber(args[2])
 
-			pm_player(("set %s to %s"):format(name, args[2]), player);
+			pm_player(("set %s to %s"):format(v, args[2]), player);
 		end
 	end)
 end
@@ -945,6 +945,7 @@ insert(task.spawn(function()
 
 				if admin then
 					create_circle(admin);
+					task.wait(.15);
 				end
 			end
 		end
