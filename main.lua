@@ -855,10 +855,10 @@ add_command("circle", function(args, player)
 			local z = math.sin(angle) * 10;
 
 			local origin = has_character(player) and player.Character:FindFirstChild("Head").CFrame
-			local point = orign.Position + v3(x, 0, z);
+			local point = origin.Position + v3(x, 0, z);
 
-			local dir = (point - orign.Position).Unit;
-			local look_cf = cf(orign.Position, orign.Position + dir);
+			local dir = (point - origin.Position).Unit;
+			local look_cf = cf(origin.Position, origin.Position + dir);
 
 			table.insert(shoot_table, {
 				["RayObject"] = Ray.new();
