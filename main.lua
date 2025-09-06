@@ -440,7 +440,7 @@ local find_car = function(player)
 	local car = nil;
 
 	for _, v in next, car_container:GetChildren() do
-		if v and v:FindFirstChild("Body") and v.Body:FindFirstChild("VehicleSeat") and not v.Body.VehicleSeat.Occupant then
+		if v and v:FindFirstChild("Body") and v.Body:FindFirstChild("VehicleSeat") and not v.Body.VehicleSeat:FindFirstChild("SeatWeld") then
 			car = v;
 			break;
 		end
