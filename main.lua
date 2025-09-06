@@ -820,8 +820,10 @@ end)
 add_thread_command("spamcars", function(args, player)
 	while task.wait(.05) do
 		local car = find_car();
+		local seat = car:FindFirstChild("Body") and car.Body.VehicleSeat;
 
 		if car then
+
 			local attempts = 0;
 
 			repeat
@@ -832,9 +834,11 @@ add_thread_command("spamcars", function(args, player)
 			
 			if has_character(player) then
 				car:PivotTo(player.Character:GetPivot());
+				task.wait();
+				respawn();
 			end
 
-			task.wait(.5);
+			task.wait(.4);
 		end
 	end
 end, {aliases = {"ka"}})
