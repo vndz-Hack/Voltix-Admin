@@ -836,6 +836,7 @@ add_thread_command("spamcars", function(args, player)
 			if has_character(player) then
 				car:PivotTo(player.Character:GetPivot());
 				task.wait();
+				replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
 				respawn();
 			end
 
