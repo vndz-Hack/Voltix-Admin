@@ -835,12 +835,12 @@ add_thread_command("spamcars", function(args, player)
 			
 			if has_character(player) then
 				car:PivotTo(player.Character:GetPivot());
-				task.wait();
-				replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
-				respawn();
 			end
 
 			task.wait(.4);
+			replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
+			respawn();
+			task.wait(.3);
 		end
 	end
 end, {aliases = {"ka"}})
