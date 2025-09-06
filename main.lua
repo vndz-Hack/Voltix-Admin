@@ -489,8 +489,9 @@ bring_player = function(target, player, cframe)
 
 		save_position();
 
-		if car then
-			local seat = car.Body.VehicleSeat;
+		local seat = car:FindFirstChild("Body") and car.Body.VehicleSeat
+
+		if car and seat then
 			local attempts = 0;
 
 			repeat
@@ -816,22 +817,24 @@ end)
 add_command("run", function(args, player)
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/funny"))()
 end)
-add_thread_command("killaura", function(args, player)
+add_thread_command("spamcars", function(args, player)
 	while task.wait(.05) do
-		if has_character(player) then
-			local kill_table = {};
+		local car = find_car();
 
-			for _, v in next, players:GetPlayers() do
-				if has_character(v) and not v:FindFirstChild("ForceField") then
-					local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p).Magnitude
-					
-					if distance <= admins[player.UserId].kill_aura_distance then
-						table.insert(kill_table, v.Name);
-					end
-				end
+		if car then
+			local attempts = 0;
+
+			repeat
+				replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
+				attempts += 1;
+				task.wait();
+			until (has_character(local_player) and local_player.Character.Humanoid.Sit) or not car or attempts >= 500;
+			
+			if has_character(player) then
+				car:PivotTo(player.Character:GetPivot());
 			end
 
-			kill(kill_table);
+			task.wait(.5);
 		end
 	end
 end, {aliases = {"ka"}})
