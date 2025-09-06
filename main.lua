@@ -875,7 +875,7 @@ add_command("circle", function(args, player)
 			local b = points[(i % #points) + 1];
 			local dir = (b - a);
 			local dist = dir.Magnitude;
-			local look_cf = cfa, b);
+			local look_cf = cf(a, b);
 
 			table.insert(shoot_table, {
 				RayObject = Ray.new();
