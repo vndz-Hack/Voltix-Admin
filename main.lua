@@ -544,6 +544,7 @@ end
 local open_door = function(door, player)
 	if door then
 		local prev_team = local_player.TeamColor.Name;
+		local hit_box = door:FindFirstChild("hitbox", true);
 
 		respawn("Bright blue");
 		task.wait(local_player:GetNetworkPing() * 5);
@@ -798,7 +799,7 @@ add_command("door", function(args, player)
 		end
 	end
 
-	open_door(closest_door)
+	open_door(closest_door, player)
 end)
 add_command("killauraamount", function(args, player)
 	if args[2] and tonumber(args[2]) then
