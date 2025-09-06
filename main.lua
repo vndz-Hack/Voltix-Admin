@@ -804,7 +804,7 @@ add_command("killauraamount", function(args, player)
 		admins[player.UserId].kill_aura_distance = tonumber(args[2]);
 	end
 end, {aliases = {"kaa"}})
-add_command("test", function(args, player)
+add_command("breakcarseats", function(args, player)
 	for _, v in next, car_container:GetDescendants() do
 		if v and (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("SeatWeld") then
 			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
@@ -812,7 +812,16 @@ add_command("test", function(args, player)
 			task.wait(.35);
 		end
 	end
-end)
+end, {aliases = {"bcs"}})
+add_command("breakseats", function(args, player)
+	for _, v in next, workspace:GetDescendants() do
+		if v and v:IsA("Seat") and not v:FindFirstChild("SeatWeld") then
+			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
+			respawn("Bright orange");
+			task.wait(.35);
+		end
+	end
+end, {aliases = {"bs"}})
 add_command("run", function(args, player)
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/funny"))()
 end)
@@ -853,7 +862,7 @@ add_command("circle", function(args, player)
 		local origin = has_character(player) and player.Character:FindFirstChild("Head").CFrame;
 
 		local points = {};
-		
+
 		for i = 0, segments - 1 do
 			local angle = (i / segments) * math.pi * 2;
 			local x = math.cos(angle) * radius;
