@@ -440,6 +440,8 @@ local find_button = function()
 end
 local find_car = function(player)
 	local car = nil;
+	
+	save_position();
 
 	for _, v in next, car_container:GetChildren() do
 		if v and v:FindFirstChild("Body") and v.Body:FindFirstChild("VehicleSeat") and not v.Body.VehicleSeat:FindFirstChild("SeatWeld") then
@@ -482,7 +484,7 @@ bring_player = function(target, player, cframe)
 
 		local car = find_car(player);
 
-		save_position();
+		task.wait(.3)
 
 		local seat = car:FindFirstChild("Body") and car.Body.VehicleSeat
 
