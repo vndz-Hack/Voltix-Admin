@@ -875,9 +875,9 @@ add_command("breakseats", function(args, player)
 		end
 	end
 end, {aliases = {"bs"}})
-add_command("run", function(args, player)
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/funny"))()
-end)
+add_command("reexecute", function(args, player)
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/main.lua"))()
+end, {aliases = {"rerun"}})
 add_thread_command("spamcars", function(args, player)
 	while task.wait(.05) do
 		local car = find_car();
