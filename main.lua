@@ -847,31 +847,40 @@ add_command("circle", function(args, player)
 
 	if tool then
 		local shoot_table = {};
+		local segments = 20;
+		local radius = 10;
 
-		for i = 0, 9 do
-			local angle = (i / 9) * math.pi * 2;
+		local origin = has_character(player) and player.Character:FindFirstChild("Head").CFrame;
 
-			local x = math.cos(angle) * 10;
-			local z = math.sin(angle) * 10;
+		local points = {};
+		
+		for i = 0, segments - 1 do
+			local angle = (i / segments) * math.pi * 2;
+			local x = math.cos(angle) * radius;
+			local z = math.sin(angle) * radius;
+			table.insert(points, origin.Position + Vector3.new(x, 0, z));
+		end
 
-			local origin = has_character(player) and player.Character:FindFirstChild("Head").CFrame
-			local point = origin.Position + v3(x, 0, z);
-
-			local dir = (point - origin.Position).Unit;
-			local look_cf = cf(origin.Position, origin.Position + dir);
+		for i = 1, #points do
+			local a = points[i];
+			local b = points[(i % #points) + 1];
+			local dir = (b - a);
+			local dist = dir.Magnitude;
+			local look_cf = cfa, b);
 
 			table.insert(shoot_table, {
-				["RayObject"] = Ray.new();
-				["Cframe"] = look_cf;
-				["Distance"] = 10;
-				["Hit"] = nil;
-			})
+				RayObject = Ray.new();
+				Cframe = look_cf;
+				Distance = dist;
+				Hit = nil;
+			});
 		end
 
 		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
-		replicatesignal.ReloadEvent:FireServer(tool);
+		replicated_storage.ReloadEvent:FireServer(tool);
 	end
 end)
+
 
 -- toggles:
 add_toggle("antitouch", nil, {aliases = {"at"}})
