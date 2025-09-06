@@ -940,7 +940,7 @@ insert(task.spawn(function()
 			end
 		end
 		for i, v in next, admins do
-			if v.toggles.circle then
+			if v.toggles and v.toggles.circle then
 				local admin = find_user_id(i);
 
 				if admin then
