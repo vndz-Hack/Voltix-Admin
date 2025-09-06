@@ -789,7 +789,7 @@ add_command("door", function(args, player)
 	local closest_distance = math.huge;
 
 	for _, v in next, doors:GetChildren() do
-		local distance = (v:FindFirstChild("hitbox", true).Position - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude;
+		local distance = (v:FindFirstChildOfClass("Model"):GetPivot().p - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude;
 
 		if distance <= closest_distance then
 			closest_door = v;
@@ -805,7 +805,7 @@ add_command("killauraamount", function(args, player)
 	end
 end, {aliases = {"kaa"}})
 add_command("test", function(args, player)
-	for _, v in next, car_container:GetDescendats() do
+	for _, v in next, car_container:GetDescendants() do
 		if v and v:IsA("Seat") and not v:FindFirstChild("SeatWeld") then
 			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
 			respawn("Bright orange");
