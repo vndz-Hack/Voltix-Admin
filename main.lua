@@ -806,7 +806,7 @@ add_command("killauraamount", function(args, player)
 end, {aliases = {"kaa"}})
 add_command("test", function(args, player)
 	for _, v in next, car_container:GetDescendants() do
-		if v and v:IsA("Seat") and not v:FindFirstChild("SeatWeld") then
+		if v and (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("SeatWeld") then
 			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
 			respawn("Bright orange");
 			task.wait(.35);
