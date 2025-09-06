@@ -1,18 +1,1 @@
-local replicate_storage = game:service"ReplicatedStorage";
-local players = game:service"Players";
-
-local local_player = players.LocalPlayer;
-local hit = replicate_storage.hit;
-
-local tool = local_player:FindFirstChild("Stakeout", true);
-
-if tool then
-	print"got tool";
-
-	for i = 1, 15 do
-		hit:FireServer(players.vndz.Character.Head, tool);
-		task.wait(.05);
-	end
-
-	print"dead";
-end
+workspace.Remote.TeamEvent:FireServer"Bright orange";
