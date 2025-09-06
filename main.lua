@@ -841,6 +841,7 @@ add_thread_command("spamcars", function(args, player)
 			replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
 			respawn();
 			task.wait(.3);
+			is_busy = false;
 		end
 	end
 end, {aliases = {"ka"}})
