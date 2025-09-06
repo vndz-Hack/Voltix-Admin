@@ -82,7 +82,7 @@ local whitelist = {
 	"vertigoawai";
 }
 local admins = {
-	418198715;
+	[418198715] = {};
 };
 local toggles = {
 	auto_respawn = true,
