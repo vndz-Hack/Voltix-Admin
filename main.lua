@@ -561,8 +561,10 @@ local open_door = function(door, player)
 		local prev_team = local_player.TeamColor.Name;
 		local hit_box = door:FindFirstChild("hitbox", true);
 
-		respawn("Bright blue");
-		task.wait(local_player:GetNetworkPing() * 5);
+		if local_player.TeamColor.Name ~= "Bright blue" then
+			respawn("Bright blue");
+			task.wait(local_player:GetNetworkPing() * 5);
+		end
 
 		if local_player.TeamColor.Name ~= "Bright blue" then
 			pm_player("guards team full", player);
@@ -709,7 +711,7 @@ local player_added = function(player)
 				local animation_id = animation.AnimationId;
 				print(animation_id);
 
-				if table.find({484926359, 484200742}, animation_id) then
+				if animation_id:find("484926359") or animation_id:find("484200742") then
 					local target = ray_cast_player(player);
 
 					print(target);
@@ -988,13 +990,13 @@ add_thread_command("breakdoors", function(args, player)
 		end
 	end
 end, {aliases = {"bd"}})
-add_thread_command("breakdoors", function(args, player)
+add_thread_command("opendoors", function(args, player)
 	while task.wait(.1) do
 		for _, v in next, doors:GetChildren() do
 			open_door(v);
 		end
 	end
-end, {aliases = {"bd"}})
+end)
 
 
 -- seperate threads:
