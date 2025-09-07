@@ -318,7 +318,7 @@ local find_user_id = function(user_id)
 end
 local ray_cast_player = function(player)
 	if has_character(player) then
-		local range_check = admins[player.UserId].punch_rage;
+		local range_check = admins[player.UserId].punch_range;
 		local root = player.Character:FindFirstChild("HumanoidRootPart");
 		local origin = root.Position;
 		local off_set = (root.CFrame * cf(0, 0, -5)).p;
