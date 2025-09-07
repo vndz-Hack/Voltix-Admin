@@ -979,7 +979,7 @@ add_command("timeout", function(args, player)
 	if tool then
 		local shoot_table = {};
 
-		for i = 1, 2000 do
+		for i = 1, 1000 do
 			table.insert(shoot_table, {
 				["RayObject"] = Ray.new();
 				["Distance"] = 2000;
@@ -988,8 +988,10 @@ add_command("timeout", function(args, player)
 			})
 		end
 
+		task.wait(1);
+
 		while true do
-			for i = 1, 5000 do
+			for i = 1, 3000 do
 				replicated_storage.ShootEvent:FireServer(shoot_table, tool);
 			end
 			replicated_storage.ReloadEvent:FireServer(tool);
