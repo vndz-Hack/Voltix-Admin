@@ -319,14 +319,23 @@ end
 local ray_cast_player = function(player)
 	if has_character(player) then
 		local root_part = player.Character:FindFirstChild("HumanoidRootPart");
+
+		if not root_part then
+			return;
+		end
+
 		local origin = root_part.Position;
-		local direction = root_part.CFrame.LookVector * (admins[player.UserId] and admins[player.UserId].punch_range or 5);
-		local create_ray = ray(origin, direction);
+		local distance = (admins[player.UserId] and admins[player.UserId].punch_range) or 5;
+		local direction = root_part.CFrame.LookVector * distance;
 
-		local hit, position = workspace:FindPartOnRay(create_ray, player.Character);
+		local ray_params = RaycastParams.new();
+		ray_params.FilterDescendantsInstances = {player.Character};
+		ray_params.FilterType = Enum.RaycastFilterType.Blacklist;
 
-		if hit then
-			local model = hit:FindFirstAncestorOfClass("Model");
+		local result = workspace:Raycast(origin, direction, ray_params);
+
+		if result and result.Instance then
+			local model = result.Instance:FindFirstAncestorOfClass("Model");
 
 			if model then
 				local target = players:GetPlayerFromCharacter(model);
@@ -622,7 +631,7 @@ end
 
 local character_added = function(character)
 	local humanoid = character:WaitForChild("Humanoid");
-	local rootpart = character:WaitForChild("HumanoidRootPart");
+	local root_part = character:WaitForChild("HumanoidRootPart");
 
 	if humanoid then
 		humanoid.Died:Once(function()
@@ -635,7 +644,7 @@ local character_added = function(character)
 
 		if toggles.save_position and camera_position and root_position then
 			current_camera.CFrame = camera_position;
-			rootpart.CFrame = root_position;
+			root_part.CFrame = root_position;
 		end
 
 		current_camera.CameraType = Enum.CameraType.Custom;
@@ -708,38 +717,37 @@ local player_added = function(player)
 
 			local animation = animation_track.Animation;
 
-			if animation then
-				local animation_id = animation.AnimationId;
-				print(animation_id);
+			if not animation then
+				return;
+			end
 
-				if animation_id:find("484926359") or animation_id:find("484200742") then
-					local target = ray_cast_player(player);
+			local animation_id = animation.AnimationId;
 
-					print(target);
+			if animation_id and (animation_id:find("484926359") or animation_id:find("484200742")) then
+				local target = ray_cast_player(player);
 
-					if has_character(target) then
-						if is_admin then
-							if is_admin.toggles.one_punch then
-								kill({target});
-								return;
-							end
-							if target.TeamColor.Name == "Bright blue" and has_character(target) then
-								local tool = get_item(nil, "M9");
+				print(target);
 
-								if tool then
-									replicated_storage.ShootEvent:FireServer({{
-										["RayObject"] = ray();
-										["Distance"] = 0;
-										["Cframe"] = cf();
-										["Hit"] = target.Character:FindFirstChild("Torso");
-									}}, tool);
-								end
-							end
-						else
-							if admins[target.UserId] and admins[target.UserId].toggles.anti_punch then
-								kill({player});
+				if has_character(target) then
+					if is_admin then
+						if is_admin.toggles.one_punch then
+							kill({target});
+							return;
+						end
+						if target.TeamColor.Name == "Bright blue" and player.TeamColor.Name == "Bright blue" then
+							local tool = get_item(nil, "M9");
+
+							if tool then
+								replicated_storage.ShootEvent:FireServer({{
+									["RayObject"] = ray();
+									["Distance"] = 0;
+									["Cframe"] = cf();
+									["Hit"] = target.Character:FindFirstChild("Torso");
+								}}, tool);
 							end
 						end
+					elseif admins[target.UserId] and admins[target.UserId].toggles.anti_punch then
+						kill({player});
 					end
 				end
 			end
