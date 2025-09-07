@@ -1097,9 +1097,11 @@ insert(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(f
 				end
 
 				local player_hit_is_admin = admins[player_hit.UserId];
-				local shooter_is_admin = admins[shooter.UserId];
 
 				if shooter then
+					local shooter_is_admin = admins[shooter.UserId];
+
+					
 					if player_hit_is_admin and player_hit_is_admin.toggles.anti_shoot then
 						kill({shooter.Name});
 					end
