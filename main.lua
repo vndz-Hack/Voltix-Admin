@@ -74,6 +74,7 @@ root_position = nil;
 camera_position = nil;
 
 -- tables:
+local draw_table = {};
 local commands = {};
 local whitelist = {
 	"vndz";
@@ -89,7 +90,9 @@ local toggles = {
 	anti_sit = true;
 };
 local loopkill = {
-	targets = {},
+	targets = {
+		"football0x1";
+	},
 	players = false,
 	guards = false,
 	inmates = false,
@@ -106,6 +109,18 @@ local teleports = {
 	gatetower = {cframe = cf(504, 125, 2318), aliases = {"gate", "gt"}},
 	tower = {cframe = cf(791, 125, 2587)}
 };
+local letters = {
+	H = {
+		{v3(0,0,0), v3(0,4,0)};
+		{v3(2,0,0), v3(2,4,0)};
+		{v3(0,2,0), v3(2,2,0)};
+	};
+	I = {
+		{v3(0,0,0), v3(2,0,0)};
+		{v3(1,0,0), v3(1,4,0)};
+		{v3(0,4,0), v3(2,4,0)};
+	};
+}
 
 getgenv().connections = {};
 
@@ -749,6 +764,42 @@ local player_added = function(player)
 		end))
 	end))
 end
+local create_text = function(player, text)
+	local tool = get_item(nil, "Remington 870");
+
+	if tool and has_character(player) then
+		local shoot_table = {};
+		local origin = player.Character:FindFirstChild("Head").CFrame;
+
+		local cursor_x = 0;
+
+		for char in text:gmatch"." do
+			local segments = letters[char:upper()];
+
+			for _, v in next, segments do
+				local a = (origin.Position + v[1] + Vector3.new(cursor_x, 0, 0))
+				local b = (origin.Position + v[2] + Vector3.new(cursor_x, 0, 0))
+
+				local direction = (b - a);
+				local distance = direction.Magnitude;
+				local look_cf = cf(a, b);
+
+				table.insert(shoot_table, {
+					RayObject = ray();
+					Cframe = look_cf;
+					Distance = distance;
+					Hit = nil;
+				});
+			end
+
+			cursor_x += 4;
+		end
+
+		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
+		replicated_storage.ReloadEvent:FireServer(tool);
+	end
+end
+
 
 -- commands:
 add_command("chat", function(args, player)
@@ -1006,6 +1057,9 @@ add_command("teamlag", function(args, player)
 		end
 	end
 end, {aliases = {"teamevent"}})
+add_command("test", function(args, player)
+	create_text(player, "HI");
+end)
 
 
 -- toggles:
