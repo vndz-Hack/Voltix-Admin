@@ -318,7 +318,7 @@ local find_user_id = function(user_id)
 end
 local ray_cast_player = function(player)
 	if has_character(player) then
-		local root_part = player.Character:FindFirstChild("HumanoidRootPart")
+		local root_part = player.Character:FindFirstChild("HumanoidRootPart");
 		local origin = root_part.Position;
 		local direction = root_part.CFrame.LookVector * (admins[player.UserId] and admins[player.UserId].punch_range or 5);
 		local create_ray = ray(origin, direction);
@@ -372,7 +372,7 @@ local get_item = function(list, return_item)
 		end
 	end
 
-	if return_item thenUnless its for wives
+	if return_item then
 		local tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
 
 		if not tool then
