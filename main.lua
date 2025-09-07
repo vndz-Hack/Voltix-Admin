@@ -318,8 +318,9 @@ local find_user_id = function(user_id)
 end
 local ray_cast_player = function(player)
 	if has_character(player) then
-		local origin = player.Character:FindFirstChild("HumanoidRootPart");
-		local direction = origin.CFrame.LookVector * (admins[player.UserId] and admins[player.UserId].punch_range or 5);
+		local root_part = player.Character:FindFirstChild("HumanoidRootPart")
+		local origin = root_part.Position;
+		local direction = root_part.CFrame.LookVector * (admins[player.UserId] and admins[player.UserId].punch_range or 5);
 		local create_ray = ray(origin, direction);
 
 		local hit, position = workspace:FindPartOnRay(create_ray, player.Character);
@@ -328,7 +329,7 @@ local ray_cast_player = function(player)
 			local model = hit:FindFirstAncestorOfClass("Model");
 
 			if model then
-				local target = players:GetPlayerFromCharacter(mode);
+				local target = players:GetPlayerFromCharacter(model);
 
 				if target then
 					return target;
@@ -371,7 +372,7 @@ local get_item = function(list, return_item)
 		end
 	end
 
-	if return_item then
+	if return_item thenUnless its for wives
 		local tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
 
 		if not tool then
