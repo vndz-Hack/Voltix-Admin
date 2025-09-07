@@ -318,24 +318,18 @@ local find_user_id = function(user_id)
 end
 local ray_cast_player = function(player)
 	if has_character(player) then
-		local root_part = player.Character:FindFirstChild("HumanoidRootPart");
+		local range_check = admins[player.UserId].punch_rage;
+		local root = player.Character:FindFirstChild("HumanoidRootPart");
+		local origin = root.Position;
+		local off_set = (root.CFrame * cf(0, 0, -5)).p;
 
-		if not root_part then
-			return;
-		end
+		local direction = cf(origin, offset).LookVector * range_check;
+		local created_ray = ray(origin, direction);
 
-		local origin = root_part.Position;
-		local distance = (admins[player.UserId] and admins[player.UserId].punch_range) or 5;
-		local direction = root_part.CFrame.LookVector * distance;
+		local hit = workspace:FindPartOnRay(ray, player.Character);
 
-		local ray_params = RaycastParams.new();
-		ray_params.FilterDescendantsInstances = {player.Character};
-		ray_params.FilterType = Enum.RaycastFilterType.Blacklist;
-
-		local result = workspace:Raycast(origin, direction, ray_params);
-
-		if result and result.Instance then
-			local model = result.Instance:FindFirstAncestorOfClass("Model");
+		if hit then
+			local model = hit:FindFirstAncestorOfClass("Model");
 
 			if model then
 				local target = players:GetPlayerFromCharacter(model);
