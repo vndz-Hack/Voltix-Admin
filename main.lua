@@ -979,7 +979,7 @@ add_command("timeout", function(args, player)
 	if tool then
 		local shoot_table = {};
 
-		for i = 1, 1000 do
+		for i = 1, 100 do
 			table.insert(shoot_table, {
 				["RayObject"] = Ray.new();
 				["Distance"] = 2000;
@@ -1002,7 +1002,7 @@ end, {aliases = {"crash", "disconnect", "FUCKSERVER", "delay"}})
 add_command("teamlag", function(args, player)
 	if args[2] and tonumber(args[2]) then
 		for i = 1, tonumber(args[2]) or 1 do
-			remote("Bright orange");
+			fire_team("Bright orange");
 		end
 	end
 end, {aliases = {"teamevent"}})
