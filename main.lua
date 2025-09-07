@@ -163,7 +163,7 @@ local save_position = function()
 	end
 end
 local add_command = function(name, func, info)
-	commands[name] = {func = func, info = info or {}};
+	commands[name] = {func = func or function() end, info = info or {}};
 end
 local add_toggle = function(name, func, info)
 	add_command(name, function(args, player)
@@ -665,7 +665,9 @@ local player_added = function(player)
 					anti_touch = false;
 					anti_punch = false;
 					anti_arrest = false;
+					anti_shoot = false;
 
+					instant_shot = false;
 					one_punch = false;
 					circle = false;
 					kill_aura = false;
@@ -698,7 +700,7 @@ local player_added = function(player)
 						local target = players:GetPlayerFromCharacter(model);
 
 						if target then
-							kill({target});
+							kill({target.Name});
 						end
 					end
 				end
@@ -725,7 +727,7 @@ local player_added = function(player)
 				if has_character(target) then
 					if is_admin then
 						if is_admin.toggles.one_punch then
-							kill({target});
+							kill({target.Name});
 							return;
 						end
 						if target.TeamColor.Name == "Bright blue" and player.TeamColor.Name == "Bright blue" then
@@ -741,7 +743,7 @@ local player_added = function(player)
 							end
 						end
 					elseif admins[target.UserId] and admins[target.UserId].toggles.anti_punch then
-						kill({player});
+						kill({player.Name});
 					end
 				end
 			end
@@ -979,6 +981,8 @@ add_toggle("anti_touch", nil, {aliases = {"antitouch", "at"}});
 add_toggle("anti_arrest", nil, {aliases = {"antiarrest", "aa"}});
 add_toggle("anti_hit", nil, {aliases = {"antihit", "ah"}});
 add_toggle("one_punch", nil, {aliases = {"onepunch", "op"}});
+add_toggle("anti_shoot", nil, {aliases = {"antishoot", "as", "shootback", "sb"}});
+add_toggle("instant_shot", nil, {aliases = {"instantshot", "instashot", "is"}});
 add_toggle("circle");
 
 -- thread commands:
@@ -1025,7 +1029,7 @@ insert(task.spawn(function()
 			if admin and v.toggles then
 				if v.toggles.circle then
 					create_circle(admin);
-					task.wait(.3);
+					task.wait(.5);
 				end
 				if v.toggles.anti_arrest then
 					for _, v in next, teams.Guards:GetPlayers() do
@@ -1033,7 +1037,7 @@ insert(task.spawn(function()
 							local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p).Magnitude;
 
 							if distance <= 15 then
-								kill({v});
+								kill({v.Name});
 							end
 						end
 					end
@@ -1057,6 +1061,51 @@ insert(run_service.RenderStepped:connect(function()
 				if part and part.CanCollide then
 					part.AssemblyLinearVelocity = v3();
 					part.AssemblyAngularVelocity = v3();
+				end
+			end
+		end
+	end
+end))
+insert(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(shoot_table)
+	for i = 1, #shoot_table do
+		local value = shoot_table[i];
+
+		if value.Hit then
+			local model = value.Hit:FindFirstAncestorOfClass("Model");
+
+			if model and model:FindFirstChild("Humanoid") then
+				local player_hit = players:GetPlayerFromCharacter(model);
+				local shooter = nil;
+
+				if has_character(player_hit) then
+					local max_distance = math.huge;
+
+					for _, v in next, players:GetPlayers() do
+						if has_character(v) then
+							local tool = v.Character:FindFirstChildOfClass("Tool");
+
+							if tool and tool:FindFirstChild("Muzzle") then
+								local distance = (value.RayObject.Origin - tool.Muzzle.Position).Magnitude;
+
+								if distance < max_distance then
+									max_distance = distance;
+									shooter = v;
+								end
+							end
+						end
+					end
+				end
+
+				local player_hit_is_admin = admins[player_hit.UserId];
+				local shooter_is_admin = admins[shooter.UserId];
+
+				if shooter then
+					if player_hit_is_admin and player_hit_is_admin.toggles.anti_shoot then
+						kill({shooter.Name});
+					end
+					if shooter_is_admin and shooter_is_admin.toggles.instant_shot then
+						kill({player_hit.Name});
+					end
 				end
 			end
 		end
