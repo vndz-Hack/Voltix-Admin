@@ -650,8 +650,8 @@ end
 local player_added = function(player)
 	local is_admin = admins[player.UserId];
 
+
 	if is_admin then
-		-- easier on my pm_player function to handle private message.. hate textchatservice
 		if not is_admin.toggles then
 			admins[player.UserId] = {
 				kill_aura_distance = 15;
@@ -670,6 +670,7 @@ local player_added = function(player)
 				punch_range = 5;
 			};
 		end
+
 		task.spawn(function()
 			chat("/w "..player.DisplayName);
 		end)
@@ -677,9 +678,12 @@ local player_added = function(player)
 		insert(player.Chatted:connect(function(message)
 			on_chatted(message, player);
 		end))
-		insert(player.CharacterAdded:connect(function(character)
-			local humanoid = character:WaitForChild("Humanoid");
+	end
 
+	insert(player.CharacterAdded:connect(function(character)
+		local humanoid = character:WaitForChild("Humanoid");
+
+		if is_admin then
 			insert(humanoid.Touched:connect(function(hit)
 				if hit and admins[player.UserId].toggles.anti_touch then
 					local model = hit:FindFirstAncestorOfClass("Model");
@@ -693,8 +697,7 @@ local player_added = function(player)
 					end
 				end
 			end))
-		end))
-	else
+		end
 		insert(humanoid.AnimationPlayed:connect(function(animation_track)
 			if not animation_track then
 				return;
@@ -738,7 +741,7 @@ local player_added = function(player)
 				end
 			end
 		end))
-	end
+	end))
 end
 
 -- commands:
