@@ -326,7 +326,7 @@ local ray_cast_player = function(player)
 		local direction = cf(origin, off_set).LookVector * range_check;
 		local created_ray = ray(origin, direction);
 
-		local hit = workspace:FindPartOnRay(ray, player.Character);
+		local hit = workspace:FindPartOnRay(created_ray, player.Character);
 
 		if hit then
 			local model = hit:FindFirstAncestorOfClass("Model");
