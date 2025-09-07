@@ -323,7 +323,7 @@ local ray_cast_player = function(player)
 		local origin = root.Position;
 		local off_set = (root.CFrame * cf(0, 0, -5)).p;
 
-		local direction = cf(origin, offset).LookVector * range_check;
+		local direction = cf(origin, off_set).LookVector * range_check;
 		local created_ray = ray(origin, direction);
 
 		local hit = workspace:FindPartOnRay(ray, player.Character);
