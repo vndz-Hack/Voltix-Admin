@@ -656,7 +656,6 @@ end
 local player_added = function(player)
 	local is_admin = admins[player.UserId];
 
-
 	if is_admin then
 		if not is_admin.toggles then
 			admins[player.UserId] = {
@@ -726,7 +725,7 @@ local player_added = function(player)
 
 				if has_character(target) then
 					if is_admin then
-						if is_admin.toggles.one_punch then
+						if is_admin.toggles and is_admin.toggles.one_punch == true then
 							kill({target.Name});
 							return;
 						end
@@ -1096,12 +1095,10 @@ insert(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(f
 					end
 				end
 
-				local player_hit_is_admin = admins[player_hit.UserId];
-
-				if shooter then
+				if has_character(player_hit) and has_character(shooter) then
+					local player_hit_is_admin = admins[player_hit.UserId];
 					local shooter_is_admin = admins[shooter.UserId];
 
-					
 					if player_hit_is_admin and player_hit_is_admin.toggles.anti_shoot then
 						kill({shooter.Name});
 					end
