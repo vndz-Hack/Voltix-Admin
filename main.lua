@@ -706,7 +706,7 @@ local player_added = function(player)
 			local animation = animation_track.Animation;
 
 			if animation then
-				local animation_id = animation_track.AnimationId;
+				local animation_id = animation.AnimationId;
 				print(animation_id);
 
 				if table.find({484926359, 484200742}, animation_id) then
