@@ -37,8 +37,6 @@ if getgenv().loaded and getgenv().connections then
 
 	getgenv().connections = nil;
 	getgenv().loaded = nil;
-
-	return;
 end
 
 getgenv().loaded = true;
@@ -59,6 +57,7 @@ local teams = game:service"Teams";
 local cf = CFrame.new;
 local v2 = Vector2.new;
 local v3 = Vector3.new;
+local ray = Ray.new;
 
 -- variables
 local prefix = "-";
@@ -317,6 +316,27 @@ local find_user_id = function(user_id)
 		end
 	end
 end
+local ray_cast_player = function(player)
+	if has_character(player) then
+		local origin = player.Character:FindFirstChild("HumanoidRootPart");
+		local direction = origin.CFrame.LookVector * (admins[player.UserId] and admins[player.UserId].punch_range or 5);
+		local create_ray = ray(origin, direction);
+
+		local hit, position = workspace:FindPartOnRay(create_ray, player.Character);
+
+		if hit then
+			local model = hit:FindFirstAncestorOfClass("Model");
+
+			if model then
+				local target = players:GetPlayerFromCharacter(mode);
+
+				if target then
+					return target;
+				end
+			end
+		end
+	end
+end
 local invoke_item = function(name, data)
 	task.spawn(function()
 		remotes.ItemHandler:InvokeServer(data or {
@@ -410,10 +430,10 @@ local kill = function(player_list)
 		if has_character(v) and not table.find(whitelist, v.Name) and not v.Character:FindFirstChild("ForceField") then
 			for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
 				table.insert(shoot_table, {
-					RayObject = Ray.new(),
-					Distance = 0,
-					Cframe = cf(),
-					Hit = v.Character.Head,
+					RayObject = ray();
+					Distance = 0;
+					Cframe = cf();
+					Hit = v.Character.Head;
 				})
 			end
 		end
@@ -440,7 +460,7 @@ local find_button = function()
 end
 local find_car = function(player)
 	local car = nil;
-	
+
 	save_position();
 
 	for _, v in next, car_container:GetChildren() do
@@ -585,7 +605,7 @@ local create_circle = function(player)
 			local look_cf = cf(a, b);
 
 			table.insert(shoot_table, {
-				RayObject = Ray.new();
+				RayObject = ray();
 				Cframe = look_cf;
 				Distance = dist;
 				Hit = nil;
@@ -632,17 +652,22 @@ local player_added = function(player)
 
 	if is_admin then
 		-- easier on my pm_player function to handle private message.. hate textchatservice
-
 		if not is_admin.toggles then
 			admins[player.UserId] = {
 				kill_aura_distance = 15;
 				toggles = {
 					anti_touch = false;
+					anti_punch = false;
+					anti_arrest = false;
+
+					one_punch = false;
 					circle = false;
+					kill_aura = false;
 				};
 				threads = {};
 				segments = 25;
 				radius = 25;
+				punch_range = 5;
 			};
 		end
 		task.spawn(function()
@@ -656,19 +681,62 @@ local player_added = function(player)
 			local humanoid = character:WaitForChild("Humanoid");
 
 			insert(humanoid.Touched:connect(function(hit)
-				if hit and admins[player.UserId].toggles.antitouch then
+				if hit and admins[player.UserId].toggles.anti_touch then
 					local model = hit:FindFirstAncestorOfClass("Model");
 
 					if model and model:FindFirstChild("Humanoid") then
 						local target = players:GetPlayerFromCharacter(model);
 
 						if target then
-							print(target);
 							kill({target});
 						end
 					end
 				end
 			end))
+		end))
+	else
+		insert(humanoid.AnimationPlayed:connect(function(animation_track)
+			if not animation_track then
+				return;
+			end
+
+			local animation = animation_track.Animation;
+
+			if animation then
+				local animation_id = animation_track.AnimationId;
+				print(animation_id);
+
+				if table.find({484926359, 484200742}, animation_id) then
+					local target = ray_cast_player(player);
+
+					print(target);
+
+					if has_character(target) then
+						if is_admin then
+							if is_admin.toggles.one_punch then
+								kill({target});
+								return;
+							end
+							if target.TeamColor.Name == "Bright blue" and has_character(target) then
+								local tool = get_item(nil, "M9");
+
+								if tool then
+									replicated_storage.ShootEvent:FireServer({{
+										["RayObject"] = ray();
+										["Distance"] = 0;
+										["Cframe"] = cf();
+										["Hit"] = target.Character:FindFirstChild("Torso");
+									}}, tool);
+								end
+							end
+						else
+							if admins[target.UserId] and admins[target.UserId].toggles.anti_punch then
+								kill({player});
+							end
+						end
+					end
+				end
+			end
 		end))
 	end
 end
@@ -726,7 +794,7 @@ add_command("kill", function(args, player)
 end, {aliases = {"k"}})
 add_command("loopkill", function(args, player)
 	if args[2] then
-		local lk_team = find_team(args[2]) or args[2] == "all" and players or args[2] == "everyone" and players
+		local lk_team = find_team(args[2]) or (args[2] == "all" or args[2] == "everyone") and players;
 
 		if lk_team then
 			loopkill[lk_team.Name:lower()] = true;
@@ -742,7 +810,7 @@ add_command("loopkill", function(args, player)
 end, {aliases = {"lk"}})
 add_command("unloopkill", function(args, player)
 	if args[2] then
-		local lk_team = find_team(args[2]) or args[2] == "all" and players or args[2] == "everyone" and players
+		local lk_team = find_team(args[2]) or (args[2] == "all" or args[2] == "everyone") and players;
 
 		if lk_team then
 			loopkill[lk_team.Name:lower()] = false;
@@ -837,7 +905,7 @@ for i, v in next, teleports do
 end
 add_command("door", function(args, player)
 	local closest_door = nil;
-	local closest_distance = math.huge;
+	local closest_distance = 50;
 
 	for _, v in next, doors:GetChildren() do
 		local distance = (v:FindFirstChildOfClass("Model"):GetPivot().p - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude;
@@ -880,54 +948,56 @@ end, {aliases = {"bs"}})
 add_command("reexecute", function(args, player)
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/main.lua"))()
 end, {aliases = {"rerun"}})
-add_thread_command("spamcars", function(args, player)
-	while task.wait(.05) do
-		local car = find_car();
-		local seat = car:FindFirstChild("Body") and car.Body.VehicleSeat;
-
-		if car then
-			local attempts = 0;
-
-			repeat
-				replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
-				attempts += 1;
-				task.wait();
-			until (has_character(local_player) and local_player.Character.Humanoid.Sit) or not car or attempts >= 500;
-			
-			if has_character(player) then
-				car:PivotTo(player.Character:GetPivot());
-			end
-
-			task.wait(.4);
-			replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
-			respawn();
-			task.wait(.3);
-		end
-	end
-end, {aliases = {"ka"}})
-
 for i, v in next, {"radius", "segments"} do
 	add_command(v, function(args, player)
-		local change_value = admins[player.UserId][v];
-
-		if change_value ~= nil and args[2] and tonumber(args[2])then
+		if args[2] and tonumber(args[2])then
 			admins[player.UserId][v] = tonumber(args[2])
 
 			pm_player(("set %s to %s"):format(v, args[2]), player);
 		end
 	end)
 end
+add_command("punchrange", function(args, player)
+	if args[2] and tonumber(args[2]) then
+		admins[player.UserId].punch_range = tonumber(args[2])
 
-add_toggle("circle");
+		pm_player(("set punchrange to %s"):format(args[2]), player);
+	end
+end, {aliases = {"pr"}})
+
 
 -- toggles:
-add_toggle("antitouch", nil, {aliases = {"at"}})
+add_toggle("anti_touch", nil, {aliases = {"antitouch", "at"}});
+add_toggle("anti_arrest", nil, {aliases = {"antiarrest", "aa"}});
+add_toggle("anti_hit", nil, {aliases = {"antihit", "ah"}});
+add_toggle("one_punch", nil, {aliases = {"onepunch", "op"}});
+add_toggle("circle");
+
+-- thread commands:
+add_thread_command("breakdoors", function(args, player)
+	while task.wait() do
+		for _, v in next, doors:GetChildren() do
+			local is_active = v:FindFirstChild("isActive", true)
+
+			if is_active and is_active.Value == false then
+				toggle_value(is_active);
+			end
+		end
+	end
+end, {aliases = {"bd"}})
+add_thread_command("breakdoors", function(args, player)
+	while task.wait(.1) do
+		for _, v in next, doors:GetChildren() do
+			open_door(v);
+		end
+	end
+end, {aliases = {"bd"}})
 
 
 -- seperate threads:
 insert(task.spawn(function()
 	while true do
-		task.wait(.1);
+		task.wait();
 		if table_count(loopkill.targets) > 0 then
 			kill(loopkill.targets);
 		end
@@ -942,12 +1012,23 @@ insert(task.spawn(function()
 			end
 		end
 		for i, v in next, admins do
-			if v.toggles and v.toggles.circle then
-				local admin = find_user_id(i);
+			local admin = find_user_id(i);
 
-				if admin then
+			if admin and v.toggles then
+				if v.toggles.circle then
 					create_circle(admin);
-					task.wait(.15);
+					task.wait(.3);
+				end
+				if v.toggles.anti_arrest then
+					for _, v in next, teams.Guards:GetPlayers() do
+						if has_character(v) then
+							local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p).Magnitude;
+
+							if distance <= 15 then
+								kill({v});
+							end
+						end
+					end
 				end
 			end
 		end
