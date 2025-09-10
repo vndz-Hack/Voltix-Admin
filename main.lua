@@ -630,10 +630,16 @@ function api:character_added(character)
             end))
 
             task.wait(local_player:GetNetworkPing() * 2.5);
+
+
             if toggles.save_position and camera_position and root_position then
                 current_camera.CFrame = camera_position;
                 root.CFrame = root_position;
             end
+
+            current_camera.CameraType = Enum.CameraType.Custom;
+            current_camera.CameraSubject = Humanoid;
+            current_camera.FieldOfView = 70;
 
             player_gui:WaitForChild("Home"):WaitForChild("intro").Visible = false;
             starter_gui:SetCoreGuiEnabled("All", true);
@@ -652,17 +658,25 @@ function api:player_added(player)
             if not is_admin.toggles then
                 admins[player.UserId] = {
                     toggles = {
-                        anti_hit = false;
                         anti_touch = false;
+                        anti_punch = false;
+                        anti_arrest = false;
                         anti_shoot = false;
 
                         instant_shot = false;
+                        one_punch = false;
+                        circle = false;
+                        kill_aura = false;
                     };
+                    threads = {};
+                    kill_aura_distance = 15;
+                    segments = 25;
+                    radius = 25;
                     punch_range = 5;
-                }
+                };
             end
 
-            player.Chatted:Connect(function(message)
+            player.Chatted:connect(function(message)
                 chat_api:on_chatted(message, player, prefix);
             end)
         end
