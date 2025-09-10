@@ -624,8 +624,6 @@ function api:character_added(character)
 
         if humanoid then
             self:insert_connection(humanoid.Died:Once(function()
-                self:find_position();
-
                 if toggles.auto_respawn and local_player.TeamColor.Name ~= "Medium stone grey" then
                     self:respawn();
                 end
@@ -663,6 +661,10 @@ function api:player_added(player)
                     punch_range = 5;
                 }
             end
+
+            player.Chatted:Connect(function(message)
+                chat_api:on_chatted(message, player, prefix);
+            end)
         end
     end
 end
@@ -782,6 +784,9 @@ api:insert_connection(players.PlayerAdded:connect(function(player)
 end));
 api:insert_connection(local_player.CharacterAdded:connect(function(character)
     api:character_added(character)
+end));
+api:insert_connection(local_player.CharacterRemoving:connect(function(character)
+    api:find_position()
 end));
 
 api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(bullet_table)
