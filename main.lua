@@ -804,38 +804,42 @@ api:insert_connection(local_player.CharacterRemoving:connect(function(character)
 end));
 
 api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(bullet_table)
-    for i = 1, #bullet_table do
-        local value = bullet_table[i];
+    for i = 1, #shoot_table do
+        local value = shoot_table[i];
 
         if value.Hit then
-            local player_hit = api:find_player(value.Hit);
+            local player_hit = api:find_player(value.Hit)
             local shooter = nil;
 
-            local max_distance = math.huge;
+            if player_hit then
+                local max_distance = math.huge;
 
-            for _, v in next, players:GetPlayers() do
-                if api:has_character(v) and v ~= player_hit then
-                    local tool = v.Character:FindFirstChildOfClass("Tool");
+                for _, v in next, players:GetPlayers() do
+                    if api:has_character(v) then
+                        local tool = v.Character:FindFirstChildOfClass("Tool");
 
-                    if tool and tool:FindFirstChild("Muzzle") then
-                        local distance = (tool.Muzzle.Position - value.RayObject.Origin).Magnitude
+                        if tool and tool:FindFirstChild("Muzzle") then
+                            local distance = (value.RayObject.Origin - tool.Muzzle.Position).Magnitude;
 
-                        if distance < max_distance then
-                            max_distance = distance;
-                            shooter = v;
+                            if distance < max_distance then
+                                max_distance = distance;
+                                shooter = v;
+                            end
                         end
                     end
                 end
             end
 
-            if player_hit and api:has_character(shooter) then
-                if admins[player_hit.UserId] and admins[player_hit.UserId].toggles.anti_shoot then
-                    api:kill({shooter});
-                    return;
+            if api:has_character(player_hit) and api:has_character(shooter) then
+                local player_hit_is_admin = admins[player_hit.UserId];
+                local shooter_is_admin = admins[shooter.UserId];
+
+                if player_hit_is_admin and player_hit_is_admin.toggles.anti_shoot then
+                    api:kill({shooter.Name});
                 end
-                if admins[shooter.UserId] and admins[shooter.UserId].toggles.instant_shot then
-                    api:kill({player_hit});
-                    return
+                
+                if shooter_is_admin and shooter_is_admin.toggles.instant_shot then
+                    api:kill({player_hit.Name});
                 end
             end
         end
