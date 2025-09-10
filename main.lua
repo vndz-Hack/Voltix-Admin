@@ -20,9 +20,10 @@ local version = "v1.0.2";
 local git_url = "https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/";
 local new_version = game:HttpGet(git_url.."version.txt");
 
-print("loading "..version);
+new_version = new_version:match("^%s*(.-)%s*$");
 
 if new_version ~= version then
+    print("loading "..version);
     loadstring(game:HttpGet(git_url.."main.lua"))();
     return;
 end
@@ -863,6 +864,7 @@ clone.Parent = workspace;
 
 api:respawn();
 
+print("loaded "..version);
 
 
 return api;
