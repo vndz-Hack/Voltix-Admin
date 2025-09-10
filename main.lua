@@ -339,8 +339,10 @@ function api:respawn(color)
     end
 end
 function api:get_item(name_list, return_item)
-    for _, v in next, name_list do
-        self:invoke_item(v);
+    if name_list and self:table_count(name_list) > 1 then
+        for _, v in next, name_list do
+            self:invoke_item(v);
+        end
     end
 
     if return_item then
@@ -860,7 +862,7 @@ local taze_player = remotes.tazePlayer;
 local clone = taze_player:Clone();
 
 taze_player:Destroy();
-clone.Parent = workspace;
+clone.Parent = remotes;
 
 api:respawn();
 
