@@ -830,7 +830,7 @@ api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClient
                 end
             end
 
-            if api:has_character(player_hit) and api:has_character(shooter) then
+            if api:has_character(shooter) then
                 local player_hit_is_admin = admins[player_hit.UserId];
                 local shooter_is_admin = admins[shooter.UserId];
 
