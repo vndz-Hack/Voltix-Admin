@@ -14,34 +14,35 @@
 --]]
 
 local start = tick();
+local version = "v1.0.2";
 
--- checking version:
---[[
-local version = "v1.0.1";
-local main_string = "https://raw.githubusercontent.com/vndz-Hack/Voltix-Admin/refs/heads/main/";
-local check_version = game:HttpGet(main_string.."version.txt");
+-- check version:
+local git_url = "https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/";
+local new_version = game:HttpGet(git_url.."version.txt");
 
-if check_version ~= version then
-	return loadstring(game:HttpGet(main_string.."main.lua"))();
-end
-]]--
+print("loading "..version);
 
-if getgenv().loaded and getgenv().connections then
-	for _, v in next, getgenv().connections do
-		if typeof(v) == "thread" then
-			task.cancel(v);
-		else
-			v:Disconnect();
-		end
-	end
-
-	getgenv().connections = nil;
-	getgenv().loaded = nil;
+if new_version ~= version then
+    loadstring(game:HttpGet(git_url.."main.lua"))();
+    return;
 end
 
-getgenv().loaded = true;
+if getgenv().loaded and getgenv().connections and getgenv().api then
+    for _, v in next, connections do
+        if type(v) == "thread" then
+            task.cancel(v);
+        else
+            v:Disconnect();
+        end
+    end
 
-print"loading";
+    table.clear(getgenv().connections);
+    table.clear(getgenv().api);
+
+    getgenv().connections = nil;
+    getgenv().loaded = nil;
+    getgenv().api = nil;
+end
 
 -- services:
 local replicated_storage = game:service"ReplicatedStorage";
@@ -74,1137 +75,794 @@ root_position = nil;
 camera_position = nil;
 
 -- tables:
-local draw_table = {};
-local commands = {};
-local whitelist = {
-	"vndz";
-	"unevenfeather71";
-	"vertigoawai";
-}
-local admins = {
-	[418198715] = {};
-};
 local toggles = {
-	auto_respawn = true,
-	save_position = true,
-	anti_sit = true;
+    save_position = true;
+    auto_respawn = true;
+    anti_sit = true;
 };
-local loopkill = {
-	targets = {
-		"football0x1";
-	},
-	players = false,
-	guards = false,
-	inmates = false,
-	criminals = false,
-	neutral = false,
+local admins = {
+    [418198715] = {};
 };
-local teleports = {
-	nexus = {cframe = cf(916, 99, 2379), aliases = {"nex"}},
-	cafeteria = {cframe = cf(941, 99, 2288), aliases = {"cafe"}},
-	armory = {cframe = cf(836, 99, 2266), aliases = {"arm"}},
-	backnexus = {cframe = cf(982, 99, 2331), aliases = {"back", "bn"}},
-	roof = {cframe = cf(823, 119, 2325)},
-	crimbase = {cframe = cf(903, 94, 2068), aliases = {"base", "cb"}},
-	gatetower = {cframe = cf(504, 125, 2318), aliases = {"gate", "gt"}},
-	tower = {cframe = cf(791, 125, 2587)}
+local white_list = {
+    "vndz";
+    "unevenfeather71";
+    "vertigoawai";
 };
-local letters = {
-	H = {
-		{v3(0,0,0), v3(0,4,0)};
-		{v3(2,0,0), v3(2,4,0)};
-		{v3(0,2,0), v3(2,2,0)};
-	};
-	I = {
-		{v3(0,0,0), v3(2,0,0)};
-		{v3(1,0,0), v3(1,4,0)};
-		{v3(0,4,0), v3(2,4,0)};
-	};
+local loop_kill = {
+    targets = {
+        "football0x1";
+    },
+    players = false,
+    guards = false,
+    inmates = false,
+    criminals = false,
+    neutral = false,
+};
+local queue = {
+    is_busy = false;
+    data = {};
 }
+local teleports = {
+    nexus = {cframe = cf(916, 99, 2379); aliases = {"nex"}};
+    cafeteria = {cframe = cf(941, 99, 2288); aliases = {"cafe"}};
+    armory = {cframe = cf(836, 99, 2266); aliases = {"arm"}};
+    backnexus = {cframe = cf(982, 99, 2331); aliases = {"back", "bn"}};
+    roof = {cframe = cf(823, 119, 2325)};
+    crimbase = {cframe = cf(-903, 94, 2068); aliases = {"base", "cb"}};
+    gatetower = {cframe = cf(504, 125, 2318); aliases = {"gate", "gt"}};
+    tower = {cframe = cf(791, 125, 2587)};
+};
+local draw_table = {};
+local chat_api = loadstring(game:HttpGet(git_url.."chat_handler.lua"))();
 
+
+getgenv().api = {};
 getgenv().connections = {};
 
--- functions:
-local insert = function(connection)
-	connections[#connections + 1] = connection;
+-- api functions:
+function api:insert_connection(connection)
+    connections[#connections + 1] = connection;
 end
-local table_count = function(tbl)
-	local count = 0;
+function api:table_count(tbl)
+    local amount = 0;
 
-	for _, _ in next, tbl do
-		count += 1;
-	end
+    for _ in next, tbl do
+        amount += 1;
+    end
 
-	return count;
+    return amount;
 end
-local chat = function(string)
-	local text_channels = text_chat_service:WaitForChild("TextChannels");
-
-	if text_channels then
-		local rbx_general = text_channels:FindFirstChild("RBXGeneral");
-
-		if rbx_general then
-			rbx_general:SendAsync(string, "you spying :3?");
-		end
-	end
+function api:queue_function(func, ...)
+    table.insert(queue.data, {func = func, args = {...}});
+    self:process_queue();
 end
-pm_player = function(string, player)
-	local text_channels = text_chat_service:WaitForChild("TextChannels");
+function api:process_queue()
+    if queue.is_busy then
+        return;
+    end
 
-	if text_channels then
-		local whisper_channel = nil;
+    queue.is_busy = true;
 
-		for _, v in next, text_channels:GetChildren() do
-			if v.Name:find("RBXWhisper") and v.Name:find(player.UserId) and v.Name:find(local_player.UserId) then
-				whisper_channel = v;
-				break;
-			end
-		end
+    while self:table_count(queue.data) > 0 do
+        local next_queue = table.remove(queue.data, 1);
 
-		if not whisper_channel then
-			chat("/w "..player.DisplayName);
-			task.wait(.3);
+        local success, result = pcall(function()
+            next_queue.func(unpack(next_queue.args));
+        end)
 
-			return pm_player(string, player);
-		end
+        if not success then
+            warn(result);
+        end
 
-		whisper_channel:SendAsync(string);
-	end
+        task.wait(1);
+    end
+
+    queue.is_busy = true;
 end
-local save_position = function()
-	if local_player.Character and local_player.Character:FindFirstChild("HumanoidRootPart") and local_player.Character.HumanoidRootPart.Position.Y > 0 then
-		root_position = local_player.Character.HumanoidRootPart.CFrame;
-		camera_position = current_camera.CFrame;
-	end
+function api:find_team(input)
+    for _, team in next, teams:GetChildren() do
+        if team.Name:lower():find(input:lower()) then
+            return team;
+        end
+    end
 end
-local add_command = function(name, func, info)
-	commands[name] = {func = func or function() end, info = info or {}};
+function api:has_character(player)
+    return player and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0;
 end
-local add_toggle = function(name, func, info)
-	add_command(name, function(args, player)
-		if admins[player.UserId].toggles[name] ~= nil then
-			local prev_value = admins[player.UserId].toggles[name];
+function api:find_player(input, player)
+    local targets = {};
 
-			if args[2] then
-				if not (args[2] == "on" or args[2] == "off") then
-					return;
-				end
-				if (args[2] == "on" and prev_value or args[2] == "off" and not prev_value) then
-					return;
-				end
+    if type(input) == "string" then
+        input = input:lower();
 
-				admins[player.UserId].toggles[name] = args[2] == "on" and true or args[2] == "off" and false or prev_value;
-			else
-				admins[player.UserId].toggles[name] = not admins[player.UserId].toggles[name];
-			end
+        if input == "me" then
+            targets = {player};
+        elseif input == "everyone" or input == "others" or input == "all" then
+            targets = players:GetPlayers();
+        elseif self:find_team(input) then
+            targets = self:find_team(input):GetPlayers();
+        else
+            for _, v in next, players:GetPlayers() do
+                if v.Name:lower():find(input) or v.DisplayName:lower():find(input) then
+                    table.insert(targets, v);
+                end
+            end
+        end
+    elseif type(input) == "number" then
+        for _, v in next, players:GetPlayers() do
+            if v.UserId == input then
+                table.insert(v, targets);
+            end
+        end
+    elseif typeof(input) == "Instance" then
+        local humanoid = input.Parent:FindFirstChild("Humanoid") or input.Parent.Parent:FindFirstChild("Humanoid");
 
-			pm_player(("%s is now %s"):format(name, admins[player.UserId].toggles[name] and "on" or "off"), player);
+        if humanoid then
+            local target = players:GetPlayerFromCharacter(humanoid.Parent);
 
-		end
-	end, info)
+            if target then
+                table.insert(targets, target);
+            end
+        end
+    end
+
+    return targets;
 end
-local add_thread_command = function(name, func, info)
-	add_command(name, function(args, player)
-		local admin_threads = admins[player.UserId].threads;
-		local existing_thread = admin_threads[name];
+function api:ray_cast_player(player)
+    if self:has_character(player) then
+        local root = player.Character:FindFirstChild("HumanoidRootPart");
+        local origin = root.Position;
+        local range = (admins[player.UserId] and admins[player.UserId].punch_range) or 5;
+        local ray_check = ray(origin, root.CFrame.LookVector * range);
+        local hit = workspace:FindPartOnRay(ray_check, player.Character);
 
-		if existing_thread and coroutine.status(existing_thread) ~= "dead" then
-			task.cancel(existing_thread);
-			admin_threads[name] = nil;
+        if hit then
+            local target = self:find_player(hit);
 
-			pm_player(("%s thread stopped"):format(name), player);
-
-			return;
-		end
-
-		local new_coroutine;
-
-		new_coroutine = coroutine.create(function()
-			pm_player(("%s thread started"):format(name), player);
-			func(args, player);
-			pm_player(("%s thread stopped"):format(name), player);
-		end)
-
-		admin_threads[name] = new_coroutine;
-		task.spawn(new_coroutine);
-	end, info)
+            if target then
+                return target;
+            end
+        end
+    end
 end
-local find_command = function(name)
-	local found_command = commands[name];
+function api:fti(part, part2)
+    if part and part2 then
+        local old_cc = part.CanCollide;
+        local old_t = part.Transparency;
+        local old_cf = part.CFrame;
 
-	if not found_command then
-		for _, v in next, commands do
-			if table.find(v.info.aliases or {}, name) then
-				found_command = v;
-				break;
-			end
-		end
-	end
+        part.CanCollide = false;
+        part.Transparency = 1;
 
-	return found_command;
+        for _ = 1, 3 do
+            part.CFrame = part2.CFrame;
+            task.wait();
+        end
+
+        part.CFrame = old_cf;
+        part.CanCollide = old_cc;
+        part.Transparency = old_t;
+    end
 end
-local on_chatted = function(string, player)
-	if string == "" then
-		return;
-	end
-	if #string == #prefix then
-		return;
-	end
-	if string:sub(1, #prefix) ~= prefix then
-		return;
-	end
-
-	local args = string.split(string, " ");
-	local split = args[1]:sub(#prefix + 1);
-	local command = find_command(split);
-
-	if not command then
-		return pm_player(("%s is not a valid command"):format(split), player);
-	end
-
-	local success, result = pcall(function()
-		command.func(args, player);
-	end)
-
-	if not success and result then
-		return pm_player(result, player);
-	end
+function api:find_position()
+    if local_player and local_player.Character and local_player.Character:FindFirstChild("Humanoid") and local_player.Character.HumanoidRootPart.Position.Y > 0 then
+        root_position = local_player.Character.HumanoidRootPart.CFrame;
+        camera_position = current_camera.CFrame;
+    end
 end
-local has_character = function(player)
-	return player and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild("HumanoidRootPart");
+function api:chat(message)
+    local text_channels = text_chat_service:WaitForChild("TextChannels");
+
+    if text_channels then
+        local rbx_general = text_channels:FindFirstChild("RBXGeneral");
+
+        if rbx_general then
+            rbx_general:SendAsync(message, "you spying >///< :3?");
+        end
+    end
 end
-local fti = function(part, part2)
-	if part and part2 then
-		local old_cc = part.CanCollide;
-		local old_t = part.Transparency;
-		local old_cf = part.CFrame;
+function api.pm_player(self, message, player)
+    local text_channels = text_chat_service:WaitForChild("TextChannels");
 
-		part.CanCollide = false;
-		part.Transparency = 1;
+    if text_channels then
+        local whisper_channel = nil;
 
-		for _ = 1, 3 do
-			part.CFrame = part2.CFrame;
-			task.wait();
-		end
+        for _, v in next, text_channels:GetChildren() do
+            if v.Name:find("RBXWhisper") and v.Name:find(player.UserId) and v.Name:find(local_player.UserId) then
+                whisper_channel = v;
+                break;
+            end
+        end
 
-		part.CFrame = old_cf;
-		part.CanCollide = old_cc;
-		part.Transparency = old_t;
-	end
+        if not whisper_channel then
+            self:chat("/w "..player.DisplayName);
+            task.wait(.4);
+
+            return self:pm_player(message, player);
+        end
+
+        whisper_channel:SendAsync(message);
+    end
 end
-local find_team = function(string)
-	for _, v in next, teams:GetChildren() do
-		if v.Name:lower():find(string:lower()) then
-			return v;
-		end
-	end
+chat_api.notfication = api.pm_player;
+function api:invoke_item(name, data)
+    task.spawn(function()
+        remotes.ItemHandler:InvokeServer(data or {
+            Position = local_player.Character and local_player.Character:GetPivot().p;
+            Parent = items:FindFirstChild(name, true);
+        })
+    end)
 end
-local find_player = function(string, player)
-	if string and string ~= "" then
-		local targets = {};
-
-		string = string:lower();
-
-		if string == "me" then
-			targets = {player};
-		elseif string == "all" or string == "everyone" then
-			targets = players:GetPlayers();
-		elseif find_team(string) then
-			targets = find_team(string):GetPlayers();
-		else
-			for _, v in next, players:GetPlayers() do
-				if v.Name:lower():find(string) or v.DisplayName:lower():find(string) then
-					table.insert(targets, v);
-				end
-			end
-		end
-
-		return targets;
-	end
+function api:toggle_value(value)
+    if value and value.Value == false then
+        self:invoke_item({
+            Position = local_player.Character and local_player.Character:GetPivot().p;
+            Parent = items.buttons['Prison Gate'];
+            isActive = value;
+        })
+    end
 end
-local find_user_id = function(user_id)
-	if tonumber(user_id) then
-		for _, v in next, players:GetPlayers() do
-			if v.UserId == user_id then
-				return v;
-			end
-		end
-	end
+function api:fire_melee(player, amount)
+    for _ = 1, amount or 1 do
+        replicated_storage.meleeEvent:FireServer(player, {Name = "Crude Knife"});
+    end
 end
-local ray_cast_player = function(player)
-	if has_character(player) then
-		local range_check = admins[player.UserId] and admins[player.UserId].punch_range or 5;
-		local root = player.Character:FindFirstChild("HumanoidRootPart");
-		local origin = root.Position;
-		local off_set = (root.CFrame * cf(0, 0, -5)).p;
-
-		local direction = cf(origin, off_set).LookVector * range_check;
-		local created_ray = ray(origin, direction);
-
-		local hit = workspace:FindPartOnRay(created_ray, player.Character);
-
-		if hit then
-			local model = hit:FindFirstAncestorOfClass("Model");
-
-			if model then
-				local target = players:GetPlayerFromCharacter(model);
-
-				if target then
-					return target;
-				end
-			end
-		end
-	end
+function api:fire_team(color)
+    remotes.TeamEvent:FireServer(color);
 end
-local invoke_item = function(name, data)
-	task.spawn(function()
-		remotes.ItemHandler:InvokeServer(data or {
-			Position = local_player.Character:FindFirstChild("HumanoidRootPart").Position;
-			Parent = items:FindFirstChild(name, true);
-		});
-	end)
+function api:respawn(color)
+    if not color then
+        color = local_player.TeamColor.Name;
+    end
+
+    if color then
+        if color == "Bright orange" or color == "Medium stone grey" then
+            self:fire_team(color);
+        elseif color == "Bright blue" then
+            if #teams.Guards:GetPlayers() == 8 then
+                if local_player.TeamColor.Name ~= color then
+                    self:fire_team("Bright orange");
+                else
+                    task.wait(local_player:GetNetworkPing() * 2.5);
+                end
+            end
+            self:fire_team(color);
+        elseif color == "Really red" then
+            self:respawn("Bright blue");
+
+            repeat
+                self:fti(criminal_pad, local_player.Character:FindFirstChild("HumanoidRootPart"));
+                task.wait(.1)
+            until local_player.TeamColor.Name == color;
+        end
+    end
 end
-local fire_melee = function(player, amount)
-	for _ = 1, amount or 1 do
-		replicated_storage.meleeEvent:FireServer(player, {Name = "Crude Knife"});
-	end
+function api:get_item(name_list, return_item)
+    for _, v in next, name_list do
+        self:invoke_item(v);
+    end
+
+    if return_item then
+        local tool = local_player:FindFirstChild(return_item, true);
+
+        repeat
+            self:invoke_item(return_item);
+            tool = local_player:FindFirstChild(return_item, true);
+            task.wait();
+        until tool;
+
+        if tool then
+            return tool;
+        end
+    end
 end
-local fire_team = function(color)
-	remotes.TeamEvent:FireServer(color);
+function api:kill(player_list)
+    if local_player.TeamColor.Name ~= "Medium stone grey" then
+        self:respawn("Medium stone grey");
+        task.wait(local_player:GetNetworkPing() * 3.5);
+    end
+
+    local shoot_list = {};
+    local tool = self:get_item(nil, "Remington 870");
+
+    for _, v in next, player_list do
+        if type(v) == "string" then
+            v = self:find_player(v);
+        end
+
+        if self:has_character(v) then
+            local force_field = v.Character:FindFirstChild("ForceField")
+
+            if force_field then
+                local conn;
+
+                conn = force_field:GetPropertyChangedSignal("Parent"):connect(function()
+                    task.wait(.2);
+                    self:kill({v});
+                end)
+
+                self:insert_connection(conn);
+            else
+                for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
+                    shoot_list[#shoot_list + 1] = {
+                        ["RayObject"] = ray();
+                        ["Cframe"] = cf();
+                        ["Distance"] = 0;
+                        ["Hit"] = v.Character:FindFirstChild("Head");
+                    }
+                end
+            end
+        end
+    end
+
+    if self:table_count(shoot_list) > 0 and tool then
+        replicated_storage.ShootEvent:FireServer(shoot_list, tool);
+        replicated_storage.ReloadEvent:FireServer(tool);
+    end
 end
-local toggle_value = function(value)
-	if value and value.Value == false then
-		invoke_item({
-			Position = local_player.Character:FindFirstChild("HumanoidRootPart").Position;
-			Parent = items.buttons['Prison Gate'];
-			isActive = value;
-		});
-	end
+function api:find_button()
+    for _, v in next, items.buttons:GetChildren() do
+        if v.Name == "Car Spawner" and not v["Car Spawner"].deb.Value then
+            return v;
+        end
+    end
 end
-local get_item = function(list, return_item)
-	if list and table_count(list) > 0 then
-		for _, v in next, list do
-			if items:FindFirstChild(v, true) then
-				invoke_item(v);
-			end
-		end
-	end
+function api:find_car(player)
+    local car = nil;
 
-	if return_item then
-		local tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
+    for _, v in next, car_container:GetChildren() do
+        if v and v:FindFirstChild("Body") and v.Body:FindFirstChild("VehicleSeat") and not v.Body.VehicleSeat:FindFirstChild("SeatWeld") then
+            car = v;
+            break;
+        end
+    end
 
-		if not tool then
-			repeat
-				invoke_item(return_item);
-				tool = local_player.Character:FindFirstChild(return_item) or local_player.Backpack:FindFirstChild(return_item);
-				task.wait();
-			until tool;
-		end
+    if not car then
+        local button = self:find_button();
 
-		return tool;
-	end
+        if not button then
+            return self:pm_player("could not find car", player);
+        end
+
+        local attempts = 0;
+
+        local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
+        task.wait(local_player:GetNetworkPing() * 2);
+
+        task.spawn(function()
+            car = car_container.ChildAdded:Wait();
+        end)
+
+        repeat
+            local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
+            self:invoke_item(nil, button);
+            task.wait(.01);
+            attempts += 1;
+        until car or attempts >= 500;
+
+        if attempts >= 500 then
+            return self:pm_player("attemps exceeded 500 (check 1)", player);
+        end
+
+        return car;
+    end
 end
-respawn = function(color)
-	if not color then
-		color = local_player.TeamColor.Name;
-	end
+function api:bring_player(target, player, cframe)
+    if self:has_character(target) and target.Character.Humanoid.Sit == false then
+        local prev_team = local_player.TeamColor.Name;
 
-	if color then
-		if color == "Bright orange" or color == "Medium stone grey" then
-			fire_team(color);
-		elseif color == "Bright blue" then
-			if #teams.Guards:GetPlayers() == 8 then
-				fire_team("Bright orange");
+        if prev_team == "Medium stone grey" then
+            self:respawn("Bright orange");
+            task.wait(local_player:GetNetworkPing() * 3.5);
+        end
 
-				if local_player.TeamColor.Name == color then
-					fire_team("Bright orange");
-				end
-			end
+        local car = self:find_car(player);
 
-			fire_team(color);
-		elseif color == "Really red" then
-			respawn("Bright blue");
+        if car and car:FindFirstChild("Body") then
+            local vehicle_seat = car.Body:FindFirstChild("VehicleSeat");
 
-			repeat
-				fti(criminal_pad, local_player.Character:FindFirstChild("HumanoidRootPart"));
-				task.wait(.1)
-			until local_player.TeamColor.Name == color;
-		end
-	end
+            if vehicle_seat then
+                local attempts = 0;
+
+                repeat
+                    replicatesignal(vehicle_seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
+                    attempts += 1;
+                    task.wait();
+                until (self:has_character(local_player) and local_player.Character.Humanoid.Sit) or not car or attempts >= 500;
+
+                if attempts >= 500 then
+                    return self:pm_player("attemps exceeded 500 (check 2)", player);
+                end
+
+                if local_player.Character.Humanoid.Sit == true then
+                    local target_seat = car.Body:FindFirstChild("Seat");
+                    local attempts = 0;
+
+                    car.PrimaryPart = target_seat; -- makes it easy to teleport to the target lol
+
+                    repeat
+                        car:PivotTo(target.Character:GetPivot());
+                        attempts += 1;
+                        task.wait();
+                    until not self:has_character(target) or (self:has_character(target) and target.Character.Humanoid.Sit) or not car or attempts >= 500;
+
+                    if attempts >= 500 then
+                        return self:pm_player("attemps exceeded 500 (check 3)", player);
+                    end
+
+                    if target.Character.Humanoid.Sit == true then
+                        for i = 1, 10 do
+                            car:PivotTo(cframe);
+                            task.wait();
+                        end
+
+                        local attempts = 0;
+
+                        repeat
+                            task.wait(1)
+                            attempts += 1;
+                        until not self:has_character(target) or (self:has_character(target) and target.Character.Humanoid.Sit == true) or attempts == 10;
+
+                        task.wait(.3);
+
+                        if attempts >= 10 then
+                            self:pm_player("attemps exceeded 10, destroying car", player);
+                            task.wait(.1);
+                            return self:pm_player("attemps exceeded 10, destroying car", target);
+                        end
+
+                        if local_player.Character.Humanoid.Sit == false then
+                            replicatesignal(vehicle_seat.RemoteDestroySeatWeld);
+                            task.wait();
+                            replicatesignal(vehicle_seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
+                        end
+
+                        task.wait(.2);
+
+                        car:BreakJoints();
+                        task.wait(.5);
+                        self:respawn(prev_team);
+                    end
+                end
+            end
+        else
+            self:pm_player("could not get car", player);
+        end
+    else
+        return self:pm_player(target.DisplayName.." has no character or is sitting", player)
+    end
 end
-local kill = function(player_list)
-	if local_player.TeamColor.Name ~= "Medium stone grey" then
-		respawn("Medium stone grey");
-		task.wait(local_player:GetNetworkPing() * 3);
-	end
+function api:draw_cirle(radius, segments, cframe)
+    local points = {};
 
-	local shoot_table = {};
-	local tool = get_item(nil, "Remington 870");
+    for i = 0, segments - 1 do
+        local angle = (i / segments) * math.pi * 2;
+        local x = math.cos(angle) * radius;
+        local z = math.sin(angle) * radius;
 
-	for _, v in next, player_list do
-		if type(v) == "string" then
-			v = players:FindFirstChild(v);
-		end
+        table.insert(points, cframe.Position + Vector3.new(x, 0, z));
+    end
 
-		if has_character(v) and not table.find(whitelist, v.Name) and not v.Character:FindFirstChild("ForceField") then
-			for _ = 1, math.ceil(v.Character.Humanoid.Health / 22.5) do
-				table.insert(shoot_table, {
-					RayObject = ray();
-					Distance = 0;
-					Cframe = cf();
-					Hit = v.Character.Head;
-				})
-			end
-		end
-	end
+    for i = 1, #points do
+        local a = points[i];
+        local b = points[(i % #points) + 1];
+        local dir = (b - a);
+        local dist = dir.Magnitude;
+        local look_cf = cf(a, b);
 
-	if tool and table_count(shoot_table) > 0 then
-		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
-		replicated_storage.ReloadEvent:FireServer(tool);
-	end
+        table.insert(draw_table, {
+            RayObject = ray();
+            Cframe = look_cf;
+            Distance = dist;
+            Hit = nil;
+        });
+    end
 end
-local find_button = function()
-	local button = nil;
+function api:draw_sphere(radius, segments, cframe)
+    local points = {}
 
-	for _, v in next, items.buttons:GetChildren() do
-		if v.Name == "Car Spawner" then
-			if not v['Car Spawner'].deb.Value then
-				button = v['Car Spawner'];
-				break;
-			end
-		end
-	end
+    for lat = 0, segments do
+        local phi = math.pi * (lat / segments);
+        for lon = 0, segments - 1 do
+            local theta = 2 * math.pi * (lon / segments);
 
-	return button;
-end
-local find_car = function(player)
-	local car = nil;
+            local x = radius * math.sin(phi) * math.cos(theta);
+            local y = radius * math.cos(phi);
+            local z = radius * math.sin(phi) * math.sin(theta);
 
-	save_position();
+            table.insert(points, cframe.Position + Vector3.new(x, y, z));
+        end
+    end
 
-	for _, v in next, car_container:GetChildren() do
-		if v and v:FindFirstChild("Body") and v.Body:FindFirstChild("VehicleSeat") and not v.Body.VehicleSeat:FindFirstChild("SeatWeld") then
-			car = v;
-			break;
-		end
-	end
+    for lat = 0, segments do
+        for lon = 0, segments - 1 do
+            local i = lat * segments + lon + 1;
+            local a = points[i];
+            local b = points[lat * segments + ((lon + 1) % segments) + 1];
 
-	if not car then
-		local button = find_button();
+            if b then
+                local dir = b - a;
+                local dist = dir.Magnitude;
+                local look_cf = cf(a, b);
 
-		if button then
-			local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
-			task.wait(local_player:GetNetworkPing() * 2);
+                table.insert(draw_table, {
+                    RayObject = ray();
+                    Cframe = look_cf;
+                    Distance = dist;
+                    Hit = nil;
+                })
+            end
 
-			task.spawn(function()
-				car = car_container.ChildAdded:Wait();
-			end)
+            if lat < segments then
+                local c = points[(lat + 1) * segments + lon + 1];
 
-			repeat
-				local_player.Character:PivotTo(button:GetPivot() * cf(0, 10, 0));
-				invoke_item(nil, button);
-				remotes.ItemHandler:InvokeServer(button);
-				task.wait();
-			until car;
-		else
-			pm_player("try again.. could not find button or car.", player)
-		end
-	end
+                if c then
+                    local dir = c - a;
+                    local dist = dir.Magnitude;
+                    local look_cf = cf(a, c);
 
-	return car;
-end
-bring_player = function(target, player, cframe)
-	if has_character(target) and target.Character.Humanoid.Sit == false then
-		local prev_team = local_player.TeamColor.Name;
-		if prev_team == "Medium stone grey" then
-			respawn("Bright orange");
-			task.wait(local_player:GetNetworkPing() * 5);
-		end
-
-		local car = find_car(player);
-
-		task.wait(.3)
-
-		local seat = car:FindFirstChild("Body") and car.Body.VehicleSeat
-
-		if car and seat then
-			local attempts = 0;
-
-			repeat
-				replicatesignal(seat.RemoteCreateSeatWeld, local_player.Character.Humanoid);
-				attempts += 1;
-				task.wait();
-			until (has_character(local_player) and local_player.Character.Humanoid.Sit) or not car or attempts >= 500;
-
-			if car and local_player.Character.Humanoid.Sit then
-				local target_seat = car.Body.Seat;
-				local attempts = 0;
-
-				car.PrimaryPart = target_seat;
-
-				repeat
-					car:PivotTo(target.Character:GetPivot());
-					task.wait();
-					attempts += 1;
-				until not has_character(target) or (has_character(target) and target.Character.Humanoid.Sit) or not car or attempts >= 500;
-
-				if car and target.Character.Humanoid.Sit then
-					for i = 1, 10 do
-						car:PivotTo(cframe);
-						task.wait();
-					end
-
-					repeat
-						task.wait();
-					until target.Character.Humanoid.Sit == false or not car;
-
-					task.wait(.2);
-					for i = 1, 10 do
-						car:PivotTo(cf(0, -500, 0));
-						task.wait(.05);
-					end
-				end
-			end
-		else
-			pm_player("could not get car", player);
-		end
-
-		task.wait(.5);
-		respawn(prev_team);
-	else
-		pm_player("player has no character", player);
-	end
-end
-local open_door = function(door, player)
-	if door then
-		local prev_team = local_player.TeamColor.Name;
-		local hit_box = door:FindFirstChild("hitbox", true);
-
-		if local_player.TeamColor.Name ~= "Bright blue" then
-			respawn("Bright blue");
-			task.wait(local_player:GetNetworkPing() * 5);
-		end
-
-		if local_player.TeamColor.Name ~= "Bright blue" then
-			pm_player("guards team full", player);
-			return;
-		end
-		if not hit_box then
-			pm_player("door is already opened", player);
-			return;
-		end
-
-		fti(hit_box, local_player.Character:FindFirstChild("HumanoidRootPart"));
-		task.wait(.5);
-		respawn(prev_team);
-	end
-end
-local create_circle = function(player)
-	local tool = get_item(nil, "Remington 870");
-
-	if tool and has_character(player) then
-		local shoot_table = {};
-		local segments = admins[player.UserId].segments;
-		local radius = admins[player.UserId].radius;
-
-		local origin = player.Character:FindFirstChild("Head").CFrame;
-
-		local points = {};
-
-		for i = 0, segments - 1 do
-			local angle = (i / segments) * math.pi * 2;
-			local x = math.cos(angle) * radius;
-			local z = math.sin(angle) * radius;
-			table.insert(points, origin.Position + Vector3.new(x, 0, z));
-		end
-
-		for i = 1, #points do
-			local a = points[i];
-			local b = points[(i % #points) + 1];
-			local dir = (b - a);
-			local dist = dir.Magnitude;
-			local look_cf = cf(a, b);
-
-			table.insert(shoot_table, {
-				RayObject = ray();
-				Cframe = look_cf;
-				Distance = dist;
-				Hit = nil;
-			});
-		end
-
-		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
-		replicated_storage.ReloadEvent:FireServer(tool);
-	end
+                    table.insert(draw_table, {
+                        RayObject = ray();
+                        Cframe = look_cf;
+                        Distance = dist;
+                        Hit = nil;
+                    })
+                end
+            end
+        end
+    end
 end
 
-local character_added = function(character)
-	local humanoid = character:WaitForChild("Humanoid");
-	local root_part = character:WaitForChild("HumanoidRootPart");
 
-	if humanoid then
-		humanoid.Died:Once(function()
-			if toggles.auto_respawn then
-				respawn();
-			end
-		end)
+function api:character_added(character)
+    if character then
+        local humanoid = character:WaitForChild("Humanoid");
+        local root = character:WaitForChild("HumanoidRootPart");
 
-		task.wait(local_player:GetNetworkPing() * 2.5);
+        if humanoid then
+            self:insert_connection(humanoid.Died:Once(function()
+                self:find_position();
 
-		if toggles.save_position and camera_position and root_position then
-			current_camera.CFrame = camera_position;
-			root_part.CFrame = root_position;
-		end
+                if toggles.auto_respawn and local_player.TeamColor.Name ~= "Medium stone grey" then
+                    self:respawn();
+                end
+            end))
 
-		current_camera.CameraType = Enum.CameraType.Custom;
-		current_camera.CameraSubject = Humanoid;
-		current_camera.FieldOfView = 70;
+            task.wait(local_player:GetNetworkPing() * 2.5);
+            if toggles.save_position and camera_position and root_position then
+                current_camera.CFrame = camera_position;
+                root.CFrame = root_position;
+            end
 
-		player_gui:WaitForChild("Home"):WaitForChild("intro").Visible = false;
-		starter_gui:SetCoreGuiEnabled("All", true);
+            player_gui:WaitForChild("Home"):WaitForChild("intro").Visible = false;
+            starter_gui:SetCoreGuiEnabled("All", true);
 
-		humanoid:SetStateEnabled("FallingDown", false);
-		humanoid:SetStateEnabled("Ragdoll", false);
-		humanoid:SetStateEnabled("Seated", not toggles.anti_sit);
-	end
+            humanoid:SetStateEnabled("FallingDown", false);
+            humanoid:SetStateEnabled("Ragdoll", false);
+            humanoid:SetStateEnabled("Seated", not toggles.anti_sit);
+        end
+    end
 end
-local player_added = function(player)
-	local is_admin = admins[player.UserId];
+function api:player_added(player)
+    if player then
+        local is_admin = admins[player.UserId]
 
-	if is_admin then
-		if not is_admin.toggles then
-			admins[player.UserId] = {
-				kill_aura_distance = 15;
-				toggles = {
-					anti_touch = false;
-					anti_punch = false;
-					anti_arrest = false;
-					anti_shoot = false;
+        if is_admin then
+            if not is_admin.toggles then
+                admins[player.UserId] = {
+                    toggles = {
+                        anti_hit = false;
+                        anti_touch = false;
+                        anti_shoot = false;
 
-					instant_shot = false;
-					one_punch = false;
-					circle = false;
-					kill_aura = false;
-				};
-				threads = {};
-				segments = 25;
-				radius = 25;
-				punch_range = 5;
-			};
-		end
-
-		task.spawn(function()
-			chat("/w "..player.DisplayName);
-		end)
-
-		insert(player.Chatted:connect(function(message)
-			on_chatted(message, player);
-		end))
-	end
-
-	insert(player.CharacterAdded:connect(function(character)
-		local humanoid = character:WaitForChild("Humanoid");
-
-		if is_admin then
-			insert(humanoid.Touched:connect(function(hit)
-				if hit and admins[player.UserId].toggles.anti_touch then
-					local model = hit:FindFirstAncestorOfClass("Model");
-
-					if model and model:FindFirstChild("Humanoid") then
-						local target = players:GetPlayerFromCharacter(model);
-
-						if target then
-							kill({target.Name});
-						end
-					end
-				end
-			end))
-		end
-		insert(humanoid.AnimationPlayed:connect(function(animation_track)
-			if not animation_track then
-				return;
-			end
-
-			local animation = animation_track.Animation;
-
-			if not animation then
-				return;
-			end
-
-			local animation_id = animation.AnimationId;
-
-			if animation_id and (animation_id:find("484926359") or animation_id:find("484200742")) then
-				local target = ray_cast_player(player);
-
-				print(target);
-
-				if has_character(target) then
-					if is_admin then
-						if is_admin.toggles and is_admin.toggles.one_punch == true then
-							kill({target.Name});
-							return;
-						end
-						if target.TeamColor.Name == "Bright blue" and player.TeamColor.Name == "Bright blue" then
-							local tool = get_item(nil, "M9");
-
-							if tool then
-								replicated_storage.ShootEvent:FireServer({{
-									["RayObject"] = ray();
-									["Distance"] = 0;
-									["Cframe"] = cf();
-									["Hit"] = target.Character:FindFirstChild("Torso");
-								}}, tool);
-							end
-						end
-					elseif admins[target.UserId] and admins[target.UserId].toggles.anti_punch then
-						kill({player.Name});
-					end
-				end
-			end
-		end))
-	end))
+                        instant_shot = false;
+                    };
+                    punch_range = 5;
+                }
+            end
+        end
+    end
 end
-local create_text = function(player, text)
-	local tool = get_item(nil, "Remington 870");
-
-	if tool and has_character(player) then
-		local shoot_table = {};
-		local origin = player.Character:FindFirstChild("Head").CFrame;
-
-		local cursor_x = 0;
-
-		for char in text:gmatch"." do
-			local segments = letters[char:upper()];
-
-			for _, v in next, segments do
-				local a = (origin.Position + v[1] + Vector3.new(cursor_x, 0, 0))
-				local b = (origin.Position + v[2] + Vector3.new(cursor_x, 0, 0))
-
-				local direction = (b - a);
-				local distance = direction.Magnitude;
-				local look_cf = cf(a, b);
-
-				table.insert(shoot_table, {
-					RayObject = ray();
-					Cframe = look_cf;
-					Distance = distance;
-					Hit = nil;
-				});
-			end
-
-			cursor_x += 4;
-		end
-
-		replicated_storage.ShootEvent:FireServer(shoot_table, tool);
-		replicated_storage.ReloadEvent:FireServer(tool);
-	end
-end
-
 
 -- commands:
-add_command("chat", function(args, player)
-	local message = args;
-	table.remove(message, 1);
-	message = tostring(table.concat(message, " "));
-
-	chat(message);
-end, {aliases = {"say"}})
-add_command("execute", function(args, player)
-	local code = args;
-	table.remove(code, 1);
-	code = tostring(table.concat(code, " "));
-
-	loadstring(code)();
-end, {aliases = {"e", "exec", "load", "loadstring"}})
-add_command("bringalt", function(args, player)
-	if has_character(player) then
-		if not has_character(local_player) then
-			return pm_player("local player is dead", player);
-		end
-
-		local player_root = player.Character:FindFirstChild("HumanoidRootPart");
-		local local_root = local_player.Character:FindFirstChild("HumanoidRootPart");
-
-		if player_root and local_root then
-			local new_cf = player_root.CFrame * cf(0, 0, -6);
-			local_root.CFrame = cf(new_cf.Position, new_cf.Position + player_root.CFrame.LookVector);
-		end
-	end
-end, {aliases = {"ba", "b"}});
-add_command("team", function(args, player)
-	if args[2] then
-		local team = find_team(args[2])
-
-		if team then
-			respawn(team.TeamColor.Name);
-		end
-	end
-end, {aliases = {"t"}});
-add_command("respawn", function(args, player)
-	respawn();
+chat_api:add_command("commands", function(args, player)
+    api:pm_player("cmds: respawn, team, ", player);
+end, {aliases = {"cmds", "cmd"}})
+chat_api:add_command("respawn", function(args, player)
+    api:respawn();
 end, {aliases = {"re", "refresh"}})
-add_command("kill", function(args, player)
-	if args[2] then
-		local targets = find_player(args[2], player);
+chat_api:add_command("bringalt", function(args, player)
+    if self:has_character(player) then
+        if not self:has_character(local_player) then
+            return pm_player("local player is dead", player);
+        end
 
-		if targets and table_count(targets) > 0 then
-			kill(targets);
-		end
-	end
+        local player_root = player.Character:FindFirstChild("HumanoidRootPart");
+        local local_root = local_player.Character:FindFirstChild("HumanoidRootPart");
+
+        if player_root and local_root then
+            local new_cf = player_root.CFrame * cf(0, 0, -6);
+
+            local_root.CFrame = cf(new_cf.Position, new_cf.Position + player_root.CFrame.LookVector);
+        end
+    end
+end, {aliases = {"ba", "b"}})
+chat_api:add_command("team", function(args, player)
+    if args[2] then
+        local team = api:find_team(args[2]:lower());
+
+        if team then
+            api:respawn(team.TeamColor.Name);
+        end
+    end
+end, {aliases = {"t"}})
+chat_api:add_command("commandcount", function(args, player)
+    api:pm_player(tostring(chat_api:command_amount()), player);
+end, {aliases = {"commandamount", "cmdamount", "cmdcount"}})
+chat_api:add_command("kill", function(args, player)
+    if args[2] then
+        local targets = api:find_player(args[2]);
+
+        if targets then
+            api:kill(targets);
+        end
+    end
 end, {aliases = {"k"}})
-add_command("loopkill", function(args, player)
-	if args[2] then
-		local lk_team = find_team(args[2]) or (args[2] == "all" or args[2] == "everyone") and players;
+chat_api:add_command("chat", function(args, player)
+    if args[2] then
+        local message = args;
+        table.remove(args, 1);
+        message = tostring(table.concat(message, " "));
 
-		if lk_team then
-			loopkill[lk_team.Name:lower()] = true;
-		else
-			local targets = find_player(args[2], player);
+        api:chat(message);
+    end
+end, {aliases = {"message", "say"}})
+chat_api:add_command("loadstring", function(args, player)
+    if args[2] then
+        local message = args;
+        table.remove(args, 1);
+        message = tostring(table.concat(message, " "));
 
-			if targets[1] and not table.find(loopkill.targets, targets[1].Name) then
-				table.insert(loopkill.targets, targets[1].Name);
-				pm_player("lking "..targets[1].Name, player);
-			end
-		end
-	end
-end, {aliases = {"lk"}})
-add_command("unloopkill", function(args, player)
-	if args[2] then
-		local lk_team = find_team(args[2]) or (args[2] == "all" or args[2] == "everyone") and players;
+        loadstring(message)();
+    end
+end, {aliases = {"execute", "load", "exec", "e"}})
+chat_api:add_command("bring", function(args, player)
+    if args[2] then
+        local target = api:find_player(args[2], player)[1];
 
-		if lk_team then
-			loopkill[lk_team.Name:lower()] = false;
-		else
-			local targets = find_player(args[2], player);
+        if target then
+            local cframe = api:has_character(player) and player.Character:GetPivot();
 
-			if targets[1] and table.find(loopkill.targets, targets[1].Name) then
-				table.remove(loopkill.targets, table.find(loopkill.targets, targets[1].Name));
-				pm_player("unlking "..targets[1].Name, player);
-			end
-		end
-	end
-end, {aliases = {"unlk"}})
-add_command("permadeath", function(args, player)
-	firesignal(local_player.ConnectDiedSignalBackend);
-	task.wait(players.RespawnTime + .1);
-	local_player.Character:BreakJoints();
+            api:queue_function(function(...)
+                api:bring(...);
+            end, target, player, cframe)
+        end
+    end
+end)
+chat_api:add_command("goto", function(args, player)
+    if args[2] then
+        local target = api:find_player(args[2], player)[1];
 
-	local prev_value = toggles.auto_respawn;
-	toggles.auto_respawn = false;
+        if target then
+            local cframe = api:has_character(target) and target.Character:GetPivot();
 
-	local_player.CharacterAdded:Once(function()
-		toggles.auto_respawn = prev_value;
-	end)
-end, {aliases = {"permdeath", "pd"}})
-add_command("rejoin", function(args, player)
-	pm_player("rejoining..", player);
-	teleport_service:TeleportToPlaceInstance(game.PlaceId, game.JobId);
-end, {aliases = {"rj"}})
-add_command("whitelist", function(args, player)
-	if args[2] then
-		local target = find_player(args[2], player)[1];
-
-		if target and not table.find(whitelist, target.Name) then
-			table.insert(whitelist, target.Name);
-			pm_player("whitelisted "..target.Name, player);
-		end
-	end
-end, {aliases = {"wl"}})
-add_command("unwhitelist", function(args, player)
-	if args[2] then
-		local target = find_player(args[2], player)[1];
-
-		if target and table.find(whitelist, target.Name) then
-			table.remove(whitelist, table.find(whitelist, target.Name));
-			pm_player("unwhitelisted "..target.Name, player);
-		end
-	end
-end, {aliases = {"unwl"}})
-add_command("prefix", function(args, player)
-	if args[2] then
-		prefix = args[2];
-
-		pm_player("prefix set to "..args[2], player);
-	end
-end, {aliases = {"pref"}})
-add_command("carbring", function(args, player)
-	if args[2] then
-		local target = find_player(args[2], player)[1]
-
-		if target then
-			bring_player(target, player, player.Character.HumanoidRootPart.CFrame * cf(0, 0, -10));
-		end
-	end
-end, {aliases = {"bring", "cb"}})
-add_command("teleportto", function(args, player)
-	if args[2] then
-		local target = find_player(args[2], player)[1];
-
-		if target then
-			bring_player(player, player, target.Character.HumanoidRootPart.CFrame * cf(0, 0, -10));
-			pm_player("teleporting to "..target.Name, player);
-		end
-	end
-end, {aliases = {"goto", "to"}})
-
+            api:queue_function(function(...)
+                api:bring(...);
+            end, target, player, cframe)
+        end
+    end
+end)
 for i, v in next, teleports do
-	add_command(tostring(i), function(args, player)
-		local target = nil;
+    chat_api:add_command(tostring(i), function(args, player)
+        if args[2] then
+            local target = api:find_player(args[2], player)[1];
 
-		if args[2] then
-			target = find_player(args[2], player)[1];
-		else
-			target = player;
-		end
-
-		if target then
-			print(target.Name)
-			bring_player(target, player, v.cframe);
-		end
-	end, v.aliases and {aliases = v.aliases} or nil)
+            if target then
+                api:queue_function(function(...)
+                    api:bring(...);
+                end, target, player, v.cframe)
+            end
+        end
+    end, {aliases = v.aliases})
 end
-add_command("door", function(args, player)
-	local closest_door = nil;
-	local closest_distance = 50;
 
-	for _, v in next, doors:GetChildren() do
-		local distance = (v:FindFirstChildOfClass("Model"):GetPivot().p - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude;
-
-		if distance <= closest_distance then
-			closest_door = v;
-			closest_distance = distance;
-		end
-	end
-
-	if closest_door then
-		open_door(closest_door, player);
-	else
-		pm_player("too far from a door", player);
-	end
-end)
-add_command("killauraamount", function(args, player)
-	if args[2] and tonumber(args[2]) then
-		admins[player.UserId].kill_aura_distance = tonumber(args[2]);
-	end
-end, {aliases = {"kaa"}})
-add_command("breakcarseats", function(args, player)
-	for _, v in next, car_container:GetDescendants() do
-		if v and (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("SeatWeld") then
-			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
-			respawn("Bright orange");
-			task.wait(.35);
-		end
-	end
-end, {aliases = {"bcs"}})
-add_command("breakseats", function(args, player)
-	for _, v in next, workspace:GetDescendants() do
-		if v and v:IsA("Seat") and not v:FindFirstChild("SeatWeld") then
-			replicatesignal(v.RemoteCreateSeatWeld, local_player.Character:FindFirstChild("Humanoid"));
-			respawn("Bright orange");
-			task.wait(.35);
-		end
-	end
-end, {aliases = {"bs"}})
-add_command("reexecute", function(args, player)
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/vndz-Hack/Voltix-Alt-Control/refs/heads/main/main.lua"))()
-end, {aliases = {"rerun"}})
-for i, v in next, {"radius", "segments"} do
-	add_command(v, function(args, player)
-		if args[2] and tonumber(args[2])then
-			admins[player.UserId][v] = tonumber(args[2])
-
-			pm_player(("set %s to %s"):format(v, args[2]), player);
-		end
-	end)
-end
-add_command("punchrange", function(args, player)
-	if args[2] and tonumber(args[2]) then
-		admins[player.UserId].punch_range = tonumber(args[2])
-
-		pm_player(("set punchrange to %s"):format(args[2]), player);
-	end
-end, {aliases = {"pr"}})
-add_command("timeout", function(args, player)
-	local tool = get_item(nil, "Remington 870");
-
-	if tool then
-		local shoot_table = {};
-
-		for i = 1, 100 do
-			table.insert(shoot_table, {
-				["RayObject"] = Ray.new();
-				["Distance"] = 2000;
-				["Cframe"] = cf();
-				["Hit"] = nil;
-			})
-		end
-
-		task.wait(1);
-
-		while true do
-			for i = 1, 3000 do
-				replicated_storage.ShootEvent:FireServer(shoot_table, tool);
-			end
-			replicated_storage.ReloadEvent:FireServer(tool);
-			task.wait(40)
-		end
-	end
-end, {aliases = {"crash", "disconnect", "FUCKSERVER", "delay"}})
-add_command("teamlag", function(args, player)
-	if args[2] and tonumber(args[2]) then
-		for i = 1, tonumber(args[2]) or 1 do
-			fire_team("Bright orange");
-		end
-	end
-end, {aliases = {"teamevent"}})
-add_command("test", function(args, player)
-	create_text(player, "HI");
-end)
 
 
 -- toggles:
-add_toggle("anti_touch", nil, {aliases = {"antitouch", "at"}});
-add_toggle("anti_arrest", nil, {aliases = {"antiarrest", "aa"}});
-add_toggle("anti_hit", nil, {aliases = {"antihit", "ah"}});
-add_toggle("one_punch", nil, {aliases = {"onepunch", "op"}});
-add_toggle("anti_shoot", nil, {aliases = {"antishoot", "as", "shootback", "sb"}});
-add_toggle("instant_shot", nil, {aliases = {"instantshot", "instashot", "is"}});
-add_toggle("circle");
 
 -- thread commands:
-add_thread_command("breakdoors", function(args, player)
-	while task.wait() do
-		for _, v in next, doors:GetChildren() do
-			local is_active = v:FindFirstChild("isActive", true)
 
-			if is_active and is_active.Value == false then
-				toggle_value(is_active);
-			end
-		end
-	end
-end, {aliases = {"bd"}})
-add_thread_command("opendoors", function(args, player)
-	while task.wait(.1) do
-		for _, v in next, doors:GetChildren() do
-			open_door(v);
-		end
-	end
+
+-- signals:
+api:insert_connection(players.PlayerAdded:connect(function(player)
+    api:player_added(player)
+end));
+api:insert_connection(local_player.CharacterAdded:connect(function(character)
+    api:character_added(character)
+end));
+
+api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(bullet_table)
+    for i = 1, #bullet_table do
+        local value = bullet_table[i];
+
+        if value.Hit then
+            local player_hit = api:find_player(value.Hit);
+            local shooter = nil;
+
+            local max_distance = math.huge;
+
+            for _, v in next, players:GetPlayers() do
+                if api:has_character(v) and v ~= player_hit then
+                    local tool = v.Character:FindFirstChildOfClass("Tool");
+
+                    if tool and tool:FindFirstChild("Muzzle") then
+                        local distance = (tool.Muzzle.Position - value.RayObject.Origin).Magnitude
+
+                        if distance < max_distance then
+                            max_distance = distance;
+                            shooter = v;
+                        end
+                    end
+                end
+            end
+
+            if player_hit and api:has_character(shooter) then
+                if admins[player_hit.UserId] and admins[player_hit.UserId].toggles.anti_shoot then
+                    api:kill({shooter});
+                    return;
+                end
+                if admins[shooter.UserId] and admins[shooter.UserId].toggles.instant_shot then
+                    api:kill({player_hit});
+                    return
+                end
+            end
+        end
+    end
+end))
+api:insert_connection(run_service.RenderStepped:connect(function()
+    for _, v in next, players:GetPlayers() do
+        if v and v ~= local_player and v.Character then
+            for _, name in next, {"Head", "Torso", "HumanoidRootPart"} do
+                local part = v.Character:FindFirstChild(name);
+
+                if part and part.CanCollide then
+                    part.AssemblyLinearVelocity = v3();
+                    part.AssemblyAngularVelocity = v3();
+                end
+            end
+        end
+    end
+end))
+
+-- threads:
+task.spawn(function()
+    while true do
+        if api:table_count(loop_kill) > 0 then
+            api:kill(loop_kill);
+        end
+        for i, v in next, loop_kill do
+            if type(v) == "boolean" and v == true then
+                local team = i == "players" and players or api:find_team(i);
+
+                if team then
+                    api:kill(team:GetPlayers());
+                end
+            end
+        end
+        task.wait(.1);
+    end
 end)
 
 
--- seperate threads:
-insert(task.spawn(function()
-	while true do
-		task.wait();
-		if table_count(loopkill.targets) > 0 then
-			kill(loopkill.targets);
-		end
+-- extra:
+local taze_player = remotes.tazePlayer;
+local clone = taze_player:Clone();
 
-		for i, v in next, loopkill do
-			if type(v) == "boolean" and v == true then
-				local team = i == "players" and players or find_team(i);
+taze_player:Destroy();
+clone.Parent = workspace;
 
-				if team then
-					kill(team:GetPlayers());
-				end
-			end
-		end
-		for i, v in next, admins do
-			local admin = find_user_id(i);
+api:respawn();
 
-			if admin and v.toggles then
-				if v.toggles.circle then
-					create_circle(admin);
-					task.wait(.5);
-				end
-				if v.toggles.anti_arrest then
-					for _, v in next, teams.Guards:GetPlayers() do
-						if has_character(v) then
-							local distance = (v.Character:GetPivot().p - player.Character:GetPivot().p).Magnitude;
 
-							if distance <= 15 then
-								kill({v.Name});
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-end))
 
--- signals:
-insert(players.PlayerAdded:connect(player_added));
-insert(local_player.CharacterAdded:connect(character_added));
-insert(local_player.CharacterRemoving:connect(save_position))
-
-insert(run_service.RenderStepped:connect(function()
-	for _, v in next, players:GetPlayers() do
-		if v and v ~= local_player and v.Character then
-			for _, name in next, {"Head", "Torso", "HumanoidRootPart"} do
-				local part = v.Character:FindFirstChild(name);
-
-				if part and part.CanCollide then
-					part.AssemblyLinearVelocity = v3();
-					part.AssemblyAngularVelocity = v3();
-				end
-			end
-		end
-	end
-end))
-insert(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(shoot_table)
-	for i = 1, #shoot_table do
-		local value = shoot_table[i];
-
-		if value.Hit then
-			local model = value.Hit:FindFirstAncestorOfClass("Model");
-
-			if model and model:FindFirstChild("Humanoid") then
-				local player_hit = players:GetPlayerFromCharacter(model);
-				local shooter = nil;
-
-				if has_character(player_hit) then
-					local max_distance = math.huge;
-
-					for _, v in next, players:GetPlayers() do
-						if has_character(v) then
-							local tool = v.Character:FindFirstChildOfClass("Tool");
-
-							if tool and tool:FindFirstChild("Muzzle") then
-								local distance = (value.RayObject.Origin - tool.Muzzle.Position).Magnitude;
-
-								if distance < max_distance then
-									max_distance = distance;
-									shooter = v;
-								end
-							end
-						end
-					end
-				end
-
-				if has_character(player_hit) and has_character(shooter) then
-					local player_hit_is_admin = admins[player_hit.UserId];
-					local shooter_is_admin = admins[shooter.UserId];
-
-					if player_hit_is_admin and player_hit_is_admin.toggles.anti_shoot then
-						kill({shooter.Name});
-					end
-					if shooter_is_admin and shooter_is_admin.toggles.instant_shot then
-						kill({player_hit.Name});
-					end
-				end
-			end
-		end
-	end
-end))
-
--- extras:
-
-for _, v in next, players:GetPlayers() do
-	player_added(v);
-end
-
-respawn();
-
-print"loaded";
-print(tick() - start);
+return api;
