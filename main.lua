@@ -803,8 +803,8 @@ api:insert_connection(local_player.CharacterRemoving:connect(function(character)
     api:find_position()
 end));
 
-api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(bullet_table)
-    for i = 1, #shoot_table do
+api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(shoot_table)
+    for i = 1, api:table_count(shoot_table) do
         local value = shoot_table[i];
 
         if value.Hit then
