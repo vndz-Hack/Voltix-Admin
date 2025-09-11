@@ -1,5 +1,13 @@
 -- admin handler:
 
+--[[
+	Update:
+
+	added get commands, they also respect the 200 character for the chat.
+
+	module:get_commands() -> returns {line1 = "cmd1, cmd2, cmd3"};
+]]
+
 -- variables:
 local command_count = 0;
 
@@ -22,6 +30,42 @@ function module:add_command(name, func, info)
 end
 function module:command_amount()
 	return command_count;
+end
+function module:get_commands()
+	local command_names = {};
+	local lines = {};
+
+	for v in next, command_table do
+		table.insert(command_names, v);
+	end
+
+	table.sort(command_names);
+
+	local max_len = 200;
+	local current_line = "";
+
+	for i, v in next, command_names do
+		local piece = (i == 1 and v) or (", "..v);
+
+		if #current_line + #piece > max_len then
+			table.insert(lines, current_line);
+			current_line = v;
+		else
+			current_line = current_line..piece;
+		end
+	end
+
+	if current_line ~= "" then
+		table.insert(lines, current_line);
+	end
+
+	local cmds = {};
+
+	for i, v in next, lines do
+		cmds["line" .. i] = v;
+	end
+
+	return cmds;
 end
 function module:toggle_command(name, admin_table, global_table, func, info)
 	self:add_command(name, function(args, player)
