@@ -5,7 +5,7 @@
 
 	added get commands, they also respect the 200 character for the chat.
 
-	module:get_commands() -> returns {line1 = "cmd1, cmd2, cmd3"};
+	module:get_commands() -> returns {line1 = "cmd1, cmd2,"}
 ]]
 
 -- variables:
@@ -59,14 +59,9 @@ function module:get_commands()
 		table.insert(lines, current_line);
 	end
 
-	local cmds = {};
-
-	for i, v in next, lines do
-		cmds["line" .. i] = v;
-	end
-
-	return cmds;
+	return lines;
 end
+
 function module:toggle_command(name, admin_table, global_table, func, info)
 	self:add_command(name, function(args, player)
 		local toggle_tbl = (admin_table[player.UserId] and admin_table[player.UserId].toggles) or global_table;
