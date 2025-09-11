@@ -461,7 +461,7 @@ data.api:insert_connection(task.spawn(function()
                     data.api:kill(team:GetPlayers());
                 end
             end
-        
+        end
 
         task.wait(.1);
     end
