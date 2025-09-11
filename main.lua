@@ -58,21 +58,21 @@ local local_player = players.LocalPlayer;
 local current_camera = workspace.CurrentCamera;
 local terrain = workspace.Terrain;
 local car_container = workspace.CarContainer;
-local criminals_pad = workspace"Criminals Spawn".SpawnLocation;
+local criminals_pad = workspace["Criminals Spawn"].SpawnLocation;
 local items = workspace.Prison_ITEMS
 local player_gui = local_player:WaitForChild"PlayerGui";
 local remotes = workspace.Remote;
 
 local prefix = "-";
-local root_cf = nil;
-local camera_cf = nil;
+local command_amount = 0;
 
 local cf = CFrame.new;
 local v3 = Vector3.new;
 local v2 = Vector2.new;
 local ray = Ray.new;
 
-
+root_cf = nil;
+camera_cf = nil;
 
 -- tables:
 getgenv().data = getgenv().data or {
@@ -108,7 +108,8 @@ getgenv().data = getgenv().data or {
     };
 };
 
-local chat_api = loadstring(game:HttpGet(git_url.."chat_handler.lua"))();
+local command_table = {};
+
 
 -- functions:
 function data.api:insert_connection(conn)
@@ -159,7 +160,7 @@ function data.api:invoke_item(name, tbl)
     task.spawn(function()
         remotes.ItemHandler:InvokeServer(tbl or {
             Position = local_player.Character and local_player.Character:GetPivot().p;
-            Parent = items:FindFirstChild(v, true);
+            Parent = items:FindFirstChild(name, true);
         })
     end)
 end
@@ -270,17 +271,12 @@ function data.api:find_player(input, player)
     return targets;
 end
 function data.api:kill(player_list)
-    if local_player.TeamColor.Name ~= "Medium stone grey" then
-        respawn("Medium stone grey");
-        task.wait(local_player:GetNetworkPing() * 3.5);
-    end
-
     local shoot_table = {};
     local tool = self:get_item(nil, "Remington 870");
 
     for _, v in next, player_list do
         if type(v) == "string" then
-            v = self:find_player(v);
+            v = players:FindFirstChild(v);
         end
 
         if self:has_character(v) and not v.Character:FindFirstChild"ForceField" then
@@ -334,7 +330,145 @@ function data.api:pm_player(message, player)
         pm_channel:SendAsync(message);
     end
 end
-chat_api.notification = data.api.pm_player;
+function data.api:add_command(name, func, info)
+    if command_table[name] then
+        return;
+    end
+
+    command_table[name] = {func = func or function() end, info = info or {}};
+end
+function data.api:find_command(name)
+    local command = command_table[name];
+
+    if not command then
+        for i, v in next, command_table do
+            if table.find(v.info.aliases or {}, name) then
+                command = v;
+                break;
+            end
+        end
+    end
+
+    return command;
+end
+function data.api:on_chatted(message, player)
+    if message == "" then
+        return;
+    end
+    if #message == #prefix then
+        return;
+    end
+    if message:sub(1, #prefix) ~= prefix then
+        return;
+    end
+
+    local args = message:split(" ");
+    local command_name = args[1]:sub(#prefix + 1);
+    local command = self:find_command(command_name);
+
+    if not command then
+        return self:pm_player(command_name.." is not a valid command", player);
+    end
+
+    local success, result = pcall(function()
+        command.func(args, player);
+    end)
+
+    if not success then
+        return self:pm_player(result, player);
+    end
+end
+function data.api:toggle_command(name, admin_table, global_table, func, info)
+    self:add_command(name, function(Args, player)
+        local toggle_tbl = (admin_table[player.UserId] and admin_table[player.UserId].toggles) or global_table;
+
+        if not toggle_tbl then
+            return self:pm_player("no toggle table found", player);
+        end
+
+        local toggle = toggle_tbl[name];
+
+        if toggle == nil then
+            return self:pm_player(name.." does not exist", player);
+        end
+
+        toggle_tbl[name] = not toggle_tbl[name];
+
+        self:pm_player(("%s is now %s"):format(name, toggle_tbl[name] and "on" or "off"), player);
+
+        if func then
+            func(args, player)
+        end
+    end, info);
+end
+function data.api:thread_command(name, thread_tbl, func, info, delay)
+    self:add_command(name, function(args, player)
+        local old_thread = thread_tbl[name];
+
+        if old_thread and coroutine.status(old_thread) ~= "dead" then
+            task.cancel(old_thread);
+            thread_tbl[name] = nil;
+
+            return self:pm_player(name.." has stopped", player);
+        end
+
+        local new_thread = coroutine.create(function()
+            self:pm_player(name.." has started", player);
+
+            while true do
+                func(args, player);
+
+                if delay then
+                    task.wait(delay);
+                end
+            end
+        end)
+
+        thread_tbl[name] = new_thread;
+
+        thread_tbl[name] = new_thread
+
+        -- monitor thread fr i'm so awesome :eggplant::splurttt:
+        task.spawn(function()
+            task.spawn(new_thread);
+            repeat
+                task.wait();
+            until not new_thread or coroutine.status(new_thread) == "dead";
+            self:pm_player(name.." has naturally stopped", player);
+            thread_tbl[name] = nil;
+        end)
+    end, info)
+end
+function data.api:get_commands()
+    local command_names = {};
+    local lines = {};
+
+    for v in next, command_table do
+        table.insert(command_names, v);
+    end
+
+    table.sort(command_names);
+
+    local max_len = 200;
+    local current_line = "";
+
+    for i, v in next, command_names do
+        local piece = (i == 1 and v) or (", "..v);
+
+        if #current_line + #piece > max_len then
+            table.insert(lines, current_line);
+            current_line = v;
+        else
+            current_line = current_line..piece;
+        end
+    end
+
+    if current_line ~= "" then
+        table.insert(lines, current_line);
+    end
+
+    return lines;
+end
 
 function data.api:character_added(character)
     if character then
@@ -348,7 +482,7 @@ function data.api:character_added(character)
                 end
             end))
 
-            task.wait(local_player:GetNetworkPing() * 3);
+            task.wait(local_player:GetNetworkPing() * 2.5);
 
             if data.toggles.save_position and root_cf and camera_cf then
                 root.CFrame = root_cf;
@@ -365,56 +499,120 @@ function data.api:character_added(character)
     end
 end
 function data.api:player_added(player)
-    if player then
-        local is_admin = data.admins[player.UserId];
+    local is_admin = data.admins[player.UserId];
 
-        if is_admin then
-            if not is_admin.toggles then
-                data.admins[player.UserId] = {
-                    toggles = {};
-                    threads = {};
-                };
-            end
-
-            self:insert_connection(player.Chatted:connect(function(message)
-                chat_api:on_chatted(message, player, prefix);
-            end))
+    if is_admin then
+    	chat("/w "..player.Name);
+    	chat("/w "..player.DisplayName);
+        if not is_admin.toggles then
+            data.admins[player.UserId] = {
+                toggles = {};
+                threads = {};
+            };
         end
+
+        self:insert_connection(player.Chatted:Connect(function(message)
+            self:on_chatted(message, player);
+        end))
     end
 end
 
 -- commands:
-chat_api:add_command("commands", function(args, player)
-    local cmds = chat_api:get_commands();
+data.api:add_command("message", function(args, player)
+    if args[2] then
+        local message = args;
+        table.remove(message, 1);
+        message = tostring(table.concat(message, " "));
 
-    for i, line in next, cmds do
-        data.api:pm_player(string.format("Commands (%d): %s", i, line), player);
+        data.api:chat(message);
     end
-end, {aliases = {"cmds"}})
-chat_api:add_command("say", function(args, player)
-    local message = args;
-    table.remove(args, 1);
-    message = table.concat(message, " ");
+end, {aliases = {"chat", "say"}})
+data.api:add_command("loadstring", function(args, player)
+    if args[2] then
+        local code = args;
+        table.remove(code, 1);
+        code = tostring(table.concat(code, " "));
 
-    data.api:chat(tostring(message));
-end, {aliases = {"chat", "message"}});
-chat_api:add_command("loadstring", function(args, player)
-    local code = args;
-    table.remove(args, 1);
-    code = table.concat(code, " ");
+        loadstring(code)();
+    end
+end, {aliases = {"execute", "exec", "ls", "e"}})
+data.api:add_command("respawn", function()
+    data.api:respawn();
+end, {aliases = {"refresh", "re"}});
+data.api:add_command("team", function(args, player)
+    if args[2] then
+        local team = data.api:find_team(args[2]);
 
-    loadstring(tostring(code))();
-end, {aliases = {"execute", "exec", "ls", "e"}});
+        if team then
+            data.api:respawn(team.TeamColor.Name);
+        end
+    end
+end, {aliases = {"t"}});
+data.api:add_command("bringalt", function(args, player)
+    if has_character(player) then
+        local root = player.Character:FindFirstChild"HumanoidRootPart";
 
-chat_api:add_command("kill", function(args, player)
+        if root then
+            local new_pos = root.Position + (root.CFrame.LookVector * 5);
+
+            local_player.Character.HumanoidRootPart.CFrame = cf(new_pos, root.Position);
+        end
+    end
+end, {aliases = {"ba", "b"}})
+data.api:add_command("kill", function(args, player)
     if args[2] then
         local targets = data.api:find_player(args[2], player);
 
         if targets then
             kill(targets);
+
+            local killed_targets = targets[1].Name;
+
+            if data.api:table_count(targets) > 1 then
+                killed_targets = data.api:table_count(targets);
+            end
+
+            data.api:pm_player(("killed %s"):format(tonumber(killed_targets) and tostring(killed_targets).." players" or killed_targets));
         end
     end
 end, {aliases = {"k"}})
+data.api:add_command("loopkill", function(args, player)
+    if args[2] then
+        local team_targets = (args[2] == "everyone" or args[2] == "others" or args[2] == "all") and players or data.api:find_team(args[2])
+
+        if team_targets then
+            data.loop_kill[team_targets.Name:lower()] = true;
+        else
+            local targets = data.api:find_player(args[2], player);
+
+            for _, v in next, targets do
+                if not table.find(data.loop_kill.targets, v.Name) then
+                    table.insert(data.loop_kill.targets, v.Name);
+                end
+            end
+        end
+    end
+end, {aliases = {"lk"}})
+data.api:add_command("unloopkill", function(args, player)
+    if args[2] then
+        local boolean_target = (args[2] == "everyone" or args[2] == "others" or args[2] == "all") and players or data.api:find_team(args[2])
+
+        if boolean_target then
+            data.loop_kill[boolean_target.Name:lower()] = false;
+        else
+            local targets = data.api:find_player(args[2], player);
+
+            if targets then
+                for _, v in next, targets do
+                    data.api:remove_data(data.loop_kill.targets, function(name)
+                        return name == v.Name;
+                    end)
+                end
+            end
+        end
+    end
+end, {aliases = {"unlk"}})
+
 
 -- thread commands:
 
@@ -446,14 +644,26 @@ data.api:insert_connection(run_service.RenderStepped:connect(function()
     end
 end))
 
+--[[ just testing:
+data.api:insert_connection(text_chat_service:WaitForChild"TextChannels":WaitForChild"RBXGeneral".MessageReceived:Connect(function(message)
+    if message.TextSource then
+        local player = data.api:find_player(message.TextSource.UserId)[1];
+
+        if player and data.admins[message.TextSource.UserId] then
+
+        end
+    end
+end))
+]]
+
 -- threads:
 data.api:insert_connection(task.spawn(function()
     while true do
         if data.api:table_count(data.loop_kill.targets) > 0 then
-            kill(data.loop_kill.targets)
+            data.api:kill(data.loop_kill.targets)
         end
 
-        for i, v in next, loopkill do
+        for i, v in next, data.loop_kill do
             if type(v) == "boolean" and v == true then
                 local team = i == "players" and players or data.api:find_team(i);
 
@@ -475,4 +685,4 @@ end
 
 data.api:respawn();
 
-print("loaded "..version.." in "..(tick() - start).. "seconds");
+print("loaded "..version.." in "..(tick() - start).. " seconds");
