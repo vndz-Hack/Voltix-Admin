@@ -158,7 +158,7 @@ function api:process_queue()
         task.wait(1);
     end
 
-    queue.is_busy = true;
+    queue.is_busy = false;
 end
 function api:find_team(input)
     for _, team in next, teams:GetChildren() do
@@ -192,7 +192,7 @@ function api:find_player(input, player)
     elseif type(input) == "number" then
         for _, v in next, players:GetPlayers() do
             if v.UserId == input then
-                table.insert(v, targets);
+                table.insert(targets, v);
             end
         end
     elseif typeof(input) == "Instance" then
@@ -285,7 +285,7 @@ function api.pm_player(self, message, player)
         whisper_channel:SendAsync(message);
     end
 end
-chat_api.notfication = api.pm_player;
+chat_api.notification = api.pm_player;
 function api:invoke_item(name, data)
     task.spawn(function()
         remotes.ItemHandler:InvokeServer(data or {
@@ -638,7 +638,7 @@ function api:character_added(character)
             end
 
             current_camera.CameraType = Enum.CameraType.Custom;
-            current_camera.CameraSubject = Humanoid;
+            current_camera.CameraSubject = humanoid;
             current_camera.FieldOfView = 70;
 
             player_gui:WaitForChild("Home"):WaitForChild("intro").Visible = false;
@@ -685,14 +685,18 @@ end
 
 -- commands:
 chat_api:add_command("commands", function(args, player)
-    api:pm_player("cmds: respawn, team, ", player);
+    local cmds = chat_api:get_commands();
+
+    for i = 1, #cmds do
+        api:notification(string.format("cmds (%d): %s", i, cmds["line" .. i]), player)
+    end
 end, {aliases = {"cmds", "cmd"}})
 chat_api:add_command("respawn", function(args, player)
     api:respawn();
 end, {aliases = {"re", "refresh"}})
 chat_api:add_command("bringalt", function(args, player)
-    if self:has_character(player) then
-        if not self:has_character(local_player) then
+    if api:has_character(player) then
+        if not api:has_character(local_player) then
             return pm_player("local player is dead", player);
         end
 
@@ -753,7 +757,7 @@ chat_api:add_command("bring", function(args, player)
             local cframe = api:has_character(player) and player.Character:GetPivot();
 
             api:queue_function(function(...)
-                api:bring(...);
+                api:bring_player(...);
             end, target, player, cframe)
         end
     end
@@ -766,7 +770,7 @@ chat_api:add_command("goto", function(args, player)
             local cframe = api:has_character(target) and target.Character:GetPivot();
 
             api:queue_function(function(...)
-                api:bring(...);
+                api:bring_player(...);
             end, target, player, cframe)
         end
     end
@@ -778,7 +782,7 @@ for i, v in next, teleports do
 
             if target then
                 api:queue_function(function(...)
-                    api:bring(...);
+                    api:bring_player(...);
                 end, target, player, v.cframe)
             end
         end
@@ -804,6 +808,10 @@ api:insert_connection(local_player.CharacterRemoving:connect(function(character)
 end));
 
 api:insert_connection(replicated_storage:WaitForChild("ReplicateEvent").OnClientEvent:connect(function(shoot_table)
+    if api:table_count(shoot_table) <= 0 then
+        -- someones exploiting!!!!!!!!!!1
+        return;
+    end
     for i = 1, api:table_count(shoot_table) do
         local value = shoot_table[i];
 
@@ -863,8 +871,8 @@ end))
 -- threads:
 task.spawn(function()
     while true do
-        if api:table_count(loop_kill) > 0 then
-            api:kill(loop_kill);
+        if api:table_count(loop_kill.targets) > 0 then
+            api:kill(loop_kill.targets);
         end
         for i, v in next, loop_kill do
             if type(v) == "boolean" and v == true then
