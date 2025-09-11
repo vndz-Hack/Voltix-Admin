@@ -132,7 +132,7 @@ function module:on_chatted(message, player, prefix)
 	if message == "" then
 		return;
 	end
-	if message == prefix then
+	if #message == #prefix then
 		return;
 	end
 	if message:sub(1, #prefix) ~= prefix then
