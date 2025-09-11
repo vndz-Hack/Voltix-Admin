@@ -1,9 +1,0 @@
-plr=game.Players.LocalPlayer;
-item=workspace.Remote.ItemHandler;
-
-button = workspace.Prison_ITEMS.buttons["Car Spawner"];
-
-item:InvokeServer({
-	Position = plr.Character:GetPivot().p;
-	Parent = button;
-})
